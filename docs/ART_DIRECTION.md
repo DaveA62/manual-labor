@@ -37,7 +37,10 @@ Use flat fills, clear tonal separation, and bold charcoal boundaries. Two-pixel 
 - Wear is intentional and sparse: chipped edges, mismatched panels, repairs, exposed fasteners, and replacement parts. Keep critical interactive parts visually distinct.
 - Manufactured equipment should remain plausible before questionable additions accumulate. Never replace an interactive control with decoration.
 - Catalog and storage thumbnails use a simplified flat vector illustration. Do not mount complete interactive machine UIs in a grid.
-- **Task boundary:** the interactive Money Press SVG geometry, components, gradients, and gesture coordinate system are retained pending Task 04. Current changes are its surrounding interface, short instructional/environmental text, and invisible responsive hit areas that maintain 44px input targets without altering the drawing. Do not use that grandfathered artwork as a reason to introduce gradients into new UI.
+- The Money Press is a layered flat SVG in `src/components/press/Parts.tsx`. Frame, head, gears, crank, paper, and upgrade attachments are separate assemblies. The 720×510 viewBox and centers/drop regions are shared with pointer handling; changes must keep both synchronized. No SVG IDs are shared across instances.
+- Installed hardware is instance-specific: feed rollers, motor/belt drive, ejector rollers, stamp actuator, and precision print insert. Animate only the assembly currently operating.
+- `useMechanicalMotion.ts` is a bounded damped visual follower. Crank input stays direct; head movement has weight and stamping has downward resistance. Recent drag velocity decays after pauses. No cosmetic inertia awards progress.
+- Stamp impacts trigger a short frame reaction and finite debris; paper settles or ejects along a short path. No infinite decorative gear motion. Sound remains optional and uses small procedural ratchet/impact transients.
 
 ## Game frame and navigation
 
@@ -53,7 +56,7 @@ Use flat fills, clear tonal separation, and bold charcoal boundaries. Two-pixel 
 
 ### Workshop
 
-One machine dominates a contained work area. The header holds identification and a Modifications control. A single short instruction describes the current manual step; automated actions show their action name. The cash counter and navigation stay in the frame. The original press viewBox scales proportionally to fit both available width and height so all parts remain visible. Never crop interactive parts to make the machine look larger.
+One machine dominates a contained work area. The header holds identification and a Modifications control. A single short instruction describes the current manual step; automated actions show their action name. The cash counter and navigation stay in the frame. The press viewBox scales proportionally to fit both available width and height so all parts remain visible. Never crop interactive parts to make the machine look larger.
 
 ### Storage
 
