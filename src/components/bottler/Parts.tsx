@@ -1,3 +1,5 @@
+import { BOTTLING } from "../../config/machines/bottler";
+import { SvgPlate, SvgIdentityPlate } from "../../ui/SvgPlate";
 import { useId } from "react";
 import type { BottleSize } from "../../game/types";
 import type { MachineTier } from "../../game/definitions";
@@ -70,11 +72,11 @@ export function Bottle({
       {marks && (
         <g strokeWidth="2">
           <path
-            d={`M-27 ${-body}h54M-27 ${-0.95 * body}h10m20 0h17`}
+            d={`M-27 ${-BOTTLING.quality.preciseMax * body}h54M-27 ${-BOTTLING.quality.preciseMin * body}h10m20 0h17`}
             stroke="var(--steel-dark)"
           />
           <path
-            d={`M-26 ${-body}h-7v${0.05 * body}h7`}
+            d={`M-26 ${-BOTTLING.quality.preciseMax * body}h-7v${(BOTTLING.quality.preciseMax - BOTTLING.quality.preciseMin) * body}h7`}
             stroke="var(--orange)"
             strokeWidth="4"
           />
@@ -135,7 +137,7 @@ export function BottlerFrame({
   pressure: number;
 }) {
   return (
-    <g data-part="bottler-frame">
+    <g data-part="bottler-frame" pointerEvents="none">
       <ellipse
         cx="358"
         cy="476"
@@ -163,32 +165,13 @@ export function BottlerFrame({
         strokeWidth="9"
         stroke="var(--machine-shade)"
       />
-      <rect
-        x="268"
-        y="58"
-        width="198"
-        height="24"
-        fill="var(--panel)"
-        strokeWidth="1.5"
+      <SvgIdentityPlate
+        x={258}
+        y={55}
+        width={222}
+        height={30}
+        code={`BT–02 / ${tierName.toUpperCase()}`}
       />
-      <text
-        x="367"
-        y="68"
-        fontSize="9"
-        textAnchor="middle"
-        className="bottler-label"
-      >
-        PROVISIONAL INDUSTRIES
-      </text>
-      <text
-        x="367"
-        y="78"
-        fontSize="9"
-        textAnchor="middle"
-        className="bottler-label"
-      >
-        BT–02 / {tierName.toUpperCase()}
-      </text>
       <path
         d="M234 103h121v124H234z"
         fill="#dce6d7"
@@ -243,10 +226,35 @@ export function BottlerFrame({
       />
       <path d="M284 272h22v20h-22z" fill="var(--frame)" />
       <path d="M280 274h30" strokeWidth="5" />
-      <Gauge x={376} y={112} value={pressure} />
+      <path
+        d="M355 119h9V98h192"
+        fill="none"
+        stroke="var(--charcoal)"
+        strokeWidth="8"
+      />
+      <path
+        d="M355 119h9V98h192"
+        fill="none"
+        stroke="var(--frame)"
+        strokeWidth="4"
+      />
+      <rect
+        x="552"
+        y="79"
+        width="136"
+        height="74"
+        fill="var(--machine-paint)"
+        strokeWidth="3"
+      />
+      <Gauge x={584} y={108} value={pressure} r={21} />
+      {variant !== "water" && (
+        <Gauge x={649} y={108} value={pressure * 0.7} r={17} />
+      )}
+      <SvgPlate x={558} y={136} width={116} height={15} fontSize={10}>
+        LINE PRESSURE
+      </SvgPlate>
       {variant !== "water" && (
         <g data-tier="reinforced">
-          <Gauge x={476} y={113} value={pressure * 0.7} r={17} />
           <path
             d="M243 126h104m-104 76h104"
             strokeWidth="5"
@@ -259,30 +267,21 @@ export function BottlerFrame({
       )}
       {variant === "premium" && (
         <g data-tier="quality-control">
-          <path d="M541 226h39v70h-39z" fill="var(--machine-paint)" />
-          <Gauge x={560} y={244} value={pressure} r={14} />
-          <path
-            d="M548 278h24m-24 7h17M545 226v-17h-13"
-            fill="none"
-            strokeWidth="2"
-          />
           <rect
-            x="244"
-            y="127"
-            width="100"
-            height="16"
-            fill="var(--panel)"
-            strokeWidth="1.5"
+            x="642"
+            y="221"
+            width="42"
+            height="79"
+            fill="var(--machine-paint)"
           />
-          <text
-            x="294"
-            y="138"
-            className="bottler-label"
-            textAnchor="middle"
-            fontSize="10"
-          >
-            QUALITY: OBSERVED
-          </text>
+          <Gauge x={663} y={245} value={pressure} r={12} />
+          <SvgPlate x={646} y={270} width={34} height={21} fontSize={10}>
+            QC III
+          </SvgPlate>
+          <path d="M663 221v-9h-29" fill="none" strokeWidth="4" />
+          <SvgPlate x={242} y={126} width={98} height={25} fontSize={11}>
+            QC / OBSERVED
+          </SvgPlate>
         </g>
       )}
       <path
@@ -331,19 +330,31 @@ export function Capper({
   pull,
   lever,
   size,
+  layer = "front",
 }: {
+  layer?: "back" | "front";
   pull: number;
   lever: number;
   size: BottleSize;
 }) {
+  if (layer === "back")
+    return (
+      <g pointerEvents="none" data-part="capper-support">
+        <path
+          d="M484 207h40v196h-40z"
+          fill="var(--machine-shade)"
+          strokeWidth="5"
+        />
+        <path d="M458 206h68v20h-68z" fill="var(--machine-paint)" />
+        <path
+          d="m486 298 13 5-13 5 13 5-13 5 13 5-13 5"
+          fill="none"
+          strokeWidth="2"
+        />
+      </g>
+    );
   return (
     <g data-part="capper">
-      <path
-        d="M484 207h40v196h-40z"
-        fill="var(--machine-shade)"
-        strokeWidth="5"
-      />
-      <path d="M458 206h68v20h-68z" fill="var(--machine-paint)" />
       <path
         d={`M473 226V${355 - bottleHeight(size) + pull * 38}`}
         stroke="var(--frame)"
@@ -352,11 +363,6 @@ export function Capper({
       <path
         d={`M461 ${355 - bottleHeight(size) + pull * 38}h24v10h-24z`}
         fill="var(--charcoal)"
-      />
-      <path
-        d="m486 298 13 5-13 5 13 5-13 5 13 5-13 5"
-        fill="none"
-        strokeWidth="2"
       />
       <g className="capper-lever" transform={`rotate(${lever * 54} 511 250)`}>
         <path d="M511 250 573 215" strokeWidth="9" />
@@ -386,35 +392,35 @@ export function BottlerHardware({
   progress: number;
 }) {
   return (
-    <g>
+    <g pointerEvents="none">
       {loader && (
         <g data-upgrade="bottle-loader">
-          <path d="M126 321h49v104h-49z" fill="var(--machine-paint)" />
+          <path d="M178 321h38v104h-38z" fill="var(--machine-paint)" />
           <Gear
-            x={150}
+            x={197}
             y={345}
             radius={17}
             angle={phase === "load" ? progress * 160 : 0}
           />
           <g
-            transform={`rotate(${phase === "load" ? -progress * 50 : 0} 151 345)`}
+            transform={`rotate(${phase === "load" ? -180 + progress * 180 : -180} 197 345)`}
           >
-            <path d="M151 345h64v-14h26v22h-26" fill="var(--frame)" />
+            <path d="M197 345h56v-12h22v20h-22" fill="var(--frame)" />
           </g>
-          <path d="M137 393h24m-24 8h24" strokeWidth="3" />
+          <path d="M185 393h23m-23 8h23" strokeWidth="3" />
         </g>
       )}
       {regulator && (
         <g data-upgrade="flow-regulator">
-          <path d="M436 111h43v34h-43z" fill="var(--machine-paint)" />
-          <path d="M443 118v20m9-20v20m9-20v20" strokeWidth="2" />
+          <path d="M631 163h49v27h-49z" fill="var(--machine-paint)" />
+          <path d="M639 169v14m9-14v14m9-14v14" strokeWidth="2" />
           <Gear
-            x={458}
-            y={151}
-            radius={14}
+            x={655}
+            y={200}
+            radius={10}
             angle={phase === "fill" ? progress * 360 : 0}
           />
-          <path d="M440 143 430 160" strokeWidth="5" />
+          <path d="M639 192h-25v-30H480v14" fill="none" strokeWidth="5" />
         </g>
       )}
       {capper && (

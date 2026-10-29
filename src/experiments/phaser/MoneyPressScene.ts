@@ -1,3 +1,4 @@
+import { UI } from '../../config/ui';
 import Phaser from 'phaser';
 import type { MachineRuntime } from '../../runtime/machine';
 import type { PressPart } from '../../runtime/press';
@@ -81,7 +82,7 @@ export class MoneyPressScene extends Phaser.Scene {
     this.gears.push({ object, kind });
   }
   private hit(part: PressPart, x: number, y: number) {
-    const target = Math.max(88, 44 * this.scale.displayScale.x / RENDER_SCALE);
+    const target = Math.max(88, UI.touchTarget * this.scale.displayScale.x / RENDER_SCALE);
     const within = (cx: number, cy: number, w: number, h: number) => Math.abs(x - cx) <= Math.max(w, target) / 2 && Math.abs(y - cy) <= Math.max(h, target) / 2;
     return part === 'paper' ? within(105, 380, 156, 94) : part === 'crank' ? Math.hypot(x - 556, y - 272) <= Math.max(80, target / 2)
       : part === 'head' ? within(355, this.headY + 32, 193, 82) : within(351, 375.5, 116, 53);

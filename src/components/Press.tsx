@@ -1,3 +1,5 @@
+import { UI } from '../config/ui';
+import { SvgPlate } from '../ui/SvgPlate';
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { automated, direction, earnings, tier } from '../game/machines';
@@ -27,7 +29,8 @@ export function Press({ state, runtime, hint }: MachineRendererProps) {
     const observer = new ResizeObserver(() => {
       const { width, height } = element.getBoundingClientRect();
       const scale = Math.min(width / 720, height / 510);
-      if (scale > 0) setHitSize(Math.max(88, 44 / scale));
+      if (drag.current) { const pointer = drag.current.pointer; drag.current = null; setVisual(null); if (element.hasPointerCapture(pointer)) element.releasePointerCapture(pointer); }
+      if (scale > 0) setHitSize(Math.max(88, UI.touchTarget / scale));
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -135,7 +138,7 @@ export function Press({ state, runtime, hint }: MachineRendererProps) {
           <circle cx="556" cy="272" r="80" fill="transparent" stroke="none" />
           <Crank angle={wheelAngle} />
           {active('crank') && <g className="part-affordance" fill="none" stroke="var(--charcoal)" strokeWidth="3"><path d={direction(state)===1?'M529 182q32-12 57 8l-2-12m2 12-13 1':'M583 182q-32-12-57 8l2-12m-2 12 13 1'} /></g>}
-          {isTurning && <text x="556" y="365" textAnchor="middle" fontSize="16" stroke="none" fill="var(--charcoal)" fontFamily="var(--heading)">{Math.round(state.progress*100)}%</text>}
+          {isTurning && <SvgPlate x={510} y={354} width={92} height={27} fontSize={16} numeric>{Math.round(state.progress*100)}%</SvgPlate>}
         </g>
         <path d="M39 418h135v18H39z" fill="var(--steel-dark)" />
         <g {...controls('paper', 'Load blank paper: drag from the stack to the plate, or press Enter')}>
@@ -147,7 +150,7 @@ export function Press({ state, runtime, hint }: MachineRendererProps) {
         <g className={active('bill')?'tray-ready':''}>
           <path d="m545 408 13-29h118l14 29v29H545z" fill="var(--frame)" />
           {state.bills>0 && bill(558,380,true)}
-          <path d="M545 409h145v28H545z" fill="var(--machine-paint, var(--mint))" /><rect x="569" y="417" width="99" height="13" fill="var(--panel)" strokeWidth="1.5" /><text x="618" y="427" fontSize="10" textAnchor="middle" fontFamily="var(--heading)" stroke="none" fill="var(--charcoal)">COLLECTION / OUT</text>
+          <path d="M545 409h145v28H545z" fill="var(--machine-paint, var(--mint))" />
         </g>
         {state.phase==='collect' && visual?.kind!=='bill' && <g {...controls('bill', 'Collect finished bill: drag it into the right tray, or press Enter')} transform={auto?`translate(${state.progress*267} ${state.progress*30})`:undefined}>
           <rect x={351-Math.max(116,hitSize)/2} y={375.5-Math.max(53,hitSize)/2} width={Math.max(116,hitSize)} height={Math.max(53,hitSize)} fill="transparent" stroke="none" />{bill(293,349,true)}
@@ -156,6 +159,7 @@ export function Press({ state, runtime, hint }: MachineRendererProps) {
         {landing && <g className="paper-landing" style={{'--paper-x':`${landing.x-291}px`,'--paper-y':`${landing.y-383}px`} as React.CSSProperties} pointerEvents="none">{bill(291,383)}</g>}
         {impact>0 && <g key={`dust-${impact}`} className="impact-dust" pointerEvents="none" fill="var(--paper)">{[[-70,-12],[-92,-32],[74,-16],[96,-38]].map(([x,y],i)=><path key={i} style={{'--dust-x':`${x}px`,'--dust-y':`${y}px`} as React.CSSProperties} d="M351 387h5v5h-5z" strokeWidth="1" />)}</g>}
         {collected>0 && <g key={`cash-${collected}`} className="bill-settle" pointerEvents="none">{bill(558,377,true)}</g>}
+        <SvgPlate x={569} y={417} width={99} height={15} fontSize={10}>OUTPUT</SvgPlate>
       </g>
     </svg>
     {hint && <div className="gesture-hint" role="status">{hint}</div>}

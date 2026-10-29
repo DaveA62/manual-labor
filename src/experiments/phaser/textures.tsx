@@ -36,7 +36,7 @@ export async function pressTextures(machine: MachineInstance, host: HTMLElement)
     tray: [<g><path d="M545 409h145v28H545z" fill="var(--machine-paint)" /><rect x="569" y="417" width="99" height="13" fill="var(--panel)" strokeWidth="1.5" /><text x="618" y="427" fontSize="10" textAnchor="middle" fontFamily="var(--heading)" stroke="none" fill="var(--charcoal)">COLLECTION / OUT</text><path d="M39 418h135v18H39z" fill="var(--steel-dark)" /></g>, [0, 375, 700, 65]],
   };
   for (const radius of [26, 20, 15, 8]) items[`gear${radius}`] = [<Gear x={0} y={0} radius={radius} angle={0} />, [-radius - 6, -radius - 6, (radius + 6) * 2, (radius + 6) * 2]];
-  const regions: Record<string, Bounds> = { feeder: [140, 310, 135, 90], motor: [478, 156, 130, 100], collector: [425, 380, 150, 56], stamper: [307, 17, 110, 123] };
+  const regions: Record<string, Bounds> = { feeder: [140, 310, 135, 90], motor: [478, 156, 130, 100], collector: [425, 380, 150, 56], stamper: [307, 17, 202, 134] };
   for (const name of ['feeder', 'motor', 'collector', 'stamper'] as const) {
     if (machine.upgrades.includes(name)) items[name] = [<Automation feeder={name === 'feeder'} motor={name === 'motor'} collector={name === 'collector'} stamper={name === 'stamper'} phase="idle" progress={0} angle={0} gears={false} />, regions[name]];
   }

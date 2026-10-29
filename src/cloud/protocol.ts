@@ -2,7 +2,8 @@ import type { WorkshopAction, WorkshopState } from "../game/types.ts";
 import { SAVE_VERSION } from "../game/codec.ts";
 export const CLOUD_SCHEMA = SAVE_VERSION;
 export const RULES_VERSION = 2;
-export const OFFLINE_CAP_MS = 8 * 60 * 60 * 1000;
+import { OFFLINE } from '../config/production.ts';
+export const OFFLINE_CAP_MS = OFFLINE.capMs;
 export type PlayerAction = Exclude<WorkshopAction, { type: "tick" }>;
 export interface TimedAction {
   id: string;

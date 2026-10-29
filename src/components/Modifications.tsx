@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Dispatch } from 'react';
+import { UI } from '../config/ui';
+import type { ComponentProps, Dispatch } from 'react';
 import { canRefit, definition, nextTier, tier, upgradePrice } from '../game/machines';
 import { feedback } from '../game/feedback';
 import type { MachineInstance, WorkshopAction } from '../game/types';
@@ -9,7 +10,11 @@ import { useElementSize } from '../ui/useElementSize';
 import { clampPage, pageCount } from '../ui/pagination';
 import { Icon } from './Icon';
 
-export function Modifications({ open, onClose, machine, number, cash, dispatch, sound }: { open: boolean; onClose: () => void; machine: MachineInstance; number: number; cash: number; dispatch: Dispatch<WorkshopAction>; sound: boolean }) {
+function MaintenanceFrame({ inline, ...props }: ComponentProps<typeof DialogPanel> & { inline?: boolean }) {
+  return inline ? <section className="equipment-panel inline-maintenance" aria-label="Modifications"><header className="panel-heading"><div><span className="equipment-label">{props.code}</span><h2>{props.title}</h2></div></header>{props.children}</section> : <DialogPanel {...props} />;
+}
+
+export function Modifications({ open, onClose, machine, number, cash, dispatch, sound, inline = false }: { inline?: boolean; open: boolean; onClose: () => void; machine: MachineInstance; number: number; cash: number; dispatch: Dispatch<WorkshopAction>; sound: boolean }) {
   const [requestedPage, setPage] = useState(0);
   const [section, setSection] = useState<'upgrades' | 'refit'>('upgrades');
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -20,11 +25,11 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
   const requirements = next?.refit;
   const eligible = canRefit(machine, cash);
   const confirming = confirmation === machine.tier;
-  const size = Math.max(1, Math.min(3, Math.floor((height - 16) / 96)));
+  const size = Math.max(1, Math.min(UI.maintenance.maxRows, Math.floor((height - UI.maintenance.padding) / (inline ? UI.maintenance.inlineRowHeight : UI.maintenance.rowHeight))));
   const pages = pageCount(upgrades.length, size);
   const page = clampPage(requestedPage, pages);
   function close() { setConfirmation(null); onClose(); }
-  return <DialogPanel open={open} onClose={close} title="Modifications" code={`${definition(machine).model} / UNIT ${serial(number)} / ${current.name.toUpperCase()}`} className="maintenance-dialog">
+  return <MaintenanceFrame inline={inline} open={open} onClose={close} title="Modifications" code={`${definition(machine).model} / UNIT ${serial(number)} / ${current.name.toUpperCase()}`} className="maintenance-dialog">
     <div className="maintenance-record"><span>{machine.bills.toLocaleString()} {definition(machine).unit}{machine.bills === 1 ? '' : 's'} <b>·</b> {money(machine.lifetime)} earned</span><strong>{money(cash)} available</strong></div>
     <nav className="maintenance-tabs" aria-label="Maintenance sections">
       <Button aria-pressed={section === 'upgrades'} onClick={() => { setSection('upgrades'); setConfirmation(null); }}>Upgrades <span>{current.upgradePriceMultiplier}× prices</span></Button>
@@ -69,5 +74,5 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
         </footer>
       </> : <div className="refit-max"><span>MAX TIER</span><p>{money(current.baseEarnings)} / {definition(machine).unit} base · {current.upgradePriceMultiplier}× upgrade prices</p></div>}
     </section>}
-  </DialogPanel>;
+  </MaintenanceFrame>;
 }

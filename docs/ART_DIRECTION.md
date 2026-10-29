@@ -74,7 +74,7 @@ Show one selected equipment entry per catalog page: illustration, model, operati
 
 ### Modifications
 
-Open a native modal maintenance panel above the stationary Workshop. Native dialog behavior provides focus containment, Escape, and focus return. List only as many whole upgrade rows as fit; use the shared pager for the rest. Show the selected press's production record and shared available cash. Never let maintenance purchases affect another press.
+In compact mode, open a native modal maintenance panel above the stationary Workshop. Wide mode reuses its content in the management column without covering the machine. Native dialog behavior provides focus containment, Escape, and focus return. List only as many whole upgrade rows as fit; use the shared pager for the rest. Show the selected press's production record and shared available cash. Never let maintenance purchases affect another press.
 
 Machine Refit is a compact section within Modifications, selected beside Upgrades. Show current/next tier, base output, upgrade price multiplier, four required automation upgrades, and fee. Improved Printing is optional and resets too. Confirm the reset explicitly before dispatching a refit; Gold shows MAX TIER. Use a two-column arrangement on short landscape screens and paginate upgrade rows. Never stack new sections beneath the panel’s available viewport.
 
@@ -107,3 +107,17 @@ Before delivery: build, run gameplay/pagination checks, inspect Workshop/Storage
 BT–02 uses a mint load-bearing frame, transparent outlined vessels, orange rotary valve and capper grip, visible carriage rails and a separate output crate. Keep silhouette, hit areas and piping mechanically legible at phone size. Water uses pale clear liquid (`#A9C9C5`), Soda muted amber (`#B8794D`) with reinforced fittings and additional gauges, and Premium rich brown-red (`#986555`) with aged brass surfaces and quality-control hardware. These are physical liquid/material colors, never new UI themes.
 
 Use independent SVG assemblies in `components/bottler/Parts.tsx`. Animate fluid, valve, carriage and capper from shared simulation snapshots; show a compact percentage/target plate and physical 95–100% marks. No quality modal or permanent instruction stack. Loader arm, valve motor, capper drive and crate conveyor reflect only that instance’s upgrades. Carbonation/flow motion runs while producing, and reduced motion disables repeated effects. Preserve the common Workshop enclosure, viewport sizing, pagination, navigation and maintenance panel.
+
+## Readability and protected SVG regions (Task 09)
+
+Important normal text meets **4.5:1** contrast; large text meets **3:1**. Use `SvgPlate` and `SvgIdentityPlate` for operational/identification information: solid cream with charcoal ink, or charcoal with cream ink. Label padding belongs to the plate, not spare space between pipes. Never lower operational readout opacity for an affordance animation. Decorative serial lettering can be small, but essential fill/value/status information also has a readable UI readout.
+
+Pressure gauges occupy a separate instrument bank; the valve has a stationary display below its full rotary envelope. Quality and serial plates sit on fixed material. Supply racks, loading arms, bottle carriage and capper supports have explicit back/front layers. The Press stamper cable routes outside its ID plate, and the tray's label is painted after bill arrival effects. Always check base equipment, every tier and installed hardware.
+
+Decorative parts must not intercept input. Transparent enlarged hit areas remain attached to the correct moving control, with uniform SVG scaling and inverse screen-coordinate conversion. Resizing cancels transient drags while retaining production progress. Avoid unrelated decoration in an interactive sweep/drop corridor. Preserve the distinctive manufactured silhouette, sparse wear, fasteners and exaggerated orange handles. Questionable engineering must look intentional; accidental clipping, unreadable paint-on-paint labels and unexplained intersections are errors.
+
+## Wide Workshop composition
+
+Use actual available content dimensions from `UI.wide`, not device type. At enough width **and** height, the left 62.5% contains the full machine, identity and operational status. The right 37.5% contains inline Modifications above paginated Storage. Keep both panels on screen; paginate upgrade rows and whole bays. Use the same purchase/refit/cards/status controls as compact mode. Detailed secondary actions may use contained dialogs; routine upgrades must not obscure the machine.
+
+When either dimension is too small, use the established compact screen with persistent navigation and a native maintenance modal. Keep `100dvh`, safe-area padding, zero primary page overflow and 44px targets. Changing layout or selecting a bay never resets a machine. Reduce optional decoration before shrinking controls. Palette and backed labels come from `tokens.css`; layout and common cosmetic timing from `config/ui.ts`. Maintain balance in `config/machines/`, not illustration code.

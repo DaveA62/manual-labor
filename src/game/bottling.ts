@@ -1,6 +1,7 @@
 import { BOTTLING } from "./definitions.ts";
 import {
   automated,
+  averageCycleDuration,
   bottlePayout,
   definition,
   earnings,
@@ -81,12 +82,11 @@ export function advanceBottler(
     remaining = elapsedMs;
   while (remaining > 1e-7) {
     if (m.phase === "load" && m.progress === 0 && fullyAutomated(m)) {
-      // Deterministic size sequence: three cycles contain exactly 80% + 100% + 120% capacity.
-      const duration =
-        3 * Object.values(definition(m).durationMs).reduce((a, b) => a + b, 0);
+      // One whole configured size sequence; shared with the long-run rate estimate.
+      const duration = BOTTLING.sizes.length * averageCycleDuration(m);
       const groups = Math.floor(remaining / duration);
       if (groups > 0) {
-        const count = groups * 3;
+        const count = groups * BOTTLING.sizes.length;
         m = {
           ...m,
           bills: m.bills + count,

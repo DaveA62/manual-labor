@@ -1,3 +1,5 @@
+import { UI } from "../config/ui";
+import { SvgPlate } from "../ui/SvgPlate";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import type { MachineRendererProps } from "../runtime/machine";
@@ -69,7 +71,7 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
     const observer = new ResizeObserver(() => {
       const r = el.getBoundingClientRect();
       const scale = Math.min(r.width / 720, r.height / 510);
-      if (scale > 0) setHit(Math.max(80, 44 / scale));
+      if (scale > 0) setHit(Math.max(80, UI.touchTarget / scale));
       cancel();
     });
     observer.observe(el);
@@ -269,7 +271,8 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
             variant={state.tier}
             pressure={b.valve}
           />
-          <g data-part="rack">
+          <Capper layer="back" pull={pull} lever={pull} size={b.size} />
+          <g data-part="rack" pointerEvents="none">
             <path
               d="M35 402h132v24H35zm0-59h13v59m105-59h13v59"
               fill="var(--machine-shade)"
@@ -320,20 +323,23 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
             <RotaryValve angle={angle} />
             {zone(418, 176, Math.max(hit, 116), Math.max(hit, 116))}
           </g>
-          <g
-            className={active("valve") ? "part-affordance" : ""}
-            pointerEvents="none"
-          >
-            <path d="M384 111q27-12 52 0l-3-11m3 11-11 2" fill="none" />
-            <text
-              x="418"
-              y="245"
-              className="bottler-label"
-              fontSize="15"
-              textAnchor="middle"
+          <g pointerEvents="none">
+            <path
+              className={active("valve") ? "part-affordance" : ""}
+              d="M384 111q27-12 52 0l-3-11m3 11-11 2"
+              fill="none"
+            />
+            <SvgPlate
+              x={363}
+              y={244}
+              width={88}
+              height={27}
+              fontSize={13}
+              dark
+              numeric
             >
               {Math.round(b.valve * 100)}% OPEN
-            </text>
+            </SvgPlate>
           </g>
           {flowing && (
             <g data-part="flow" pointerEvents="none">
@@ -420,7 +426,7 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
             stroke="var(--frame)"
             strokeWidth="9"
           />
-          <g data-part="crate">
+          <g data-part="crate" pointerEvents="none">
             <path
               d="m578 382 15-18h88l14 18v65H578z"
               fill="var(--machine-shade)"
@@ -431,23 +437,9 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
               stroke="var(--machine-highlight)"
               strokeWidth="5"
             />
-            <rect
-              x="599"
-              y="405"
-              width="76"
-              height="20"
-              fill="var(--panel)"
-              strokeWidth="1.5"
-            />
-            <text
-              x="637"
-              y="419"
-              textAnchor="middle"
-              className="bottler-label"
-              fontSize="12"
-            >
-              COLLECTION / OUT
-            </text>
+            <SvgPlate x={591} y={404} width={91} height={27} fontSize={14}>
+              OUTPUT
+            </SvgPlate>
             {state.bills > 0 && (
               <path
                 d="M615 373v-19h13v19m22 0v-26h13v26"
@@ -465,9 +457,9 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
               />
             </g>
           )}
-          <text x="45" y="470" className="bottler-label" fontSize="11">
+          <SvgPlate x={245} y={446} width={220} height={17} fontSize={10}>
             BT–02 / GRAVITY ASSISTED
-          </text>
+          </SvgPlate>
           {active("rack") && (
             <path
               className="part-affordance"
@@ -502,10 +494,11 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
           %
         </span>
         <strong>{Math.round(b.fill * 100)}% FILL</strong>
+        <span>{Math.round(b.valve * 100)}% VALVE</span>
         <span>
           {phase === "collect" || phase === "cap"
             ? `${b.regulated ? "REGULATED" : bottleQuality(b.fill).toUpperCase()} · ${money(bottlePayout(state))}`
-            : "TARGET 95–100%"}
+            : `TARGET ${BOTTLING.quality.preciseMin * 100}–${BOTTLING.quality.preciseMax * 100}%`}
         </span>
       </div>
       {hint && (

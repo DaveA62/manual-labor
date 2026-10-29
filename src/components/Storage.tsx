@@ -1,3 +1,4 @@
+import { UI } from '../config/ui';
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { feedback } from '../game/feedback';
@@ -12,7 +13,7 @@ import { clampPage, gridLayout, pageCount, pageForSlot } from '../ui/pagination'
 import { useElementSize } from '../ui/useElementSize';
 
 interface DragState { id: string; pointer: number; startX: number; startY: number; x: number; y: number; ready: boolean; active: boolean; target: number | null }
-export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopState; dispatch: Dispatch<WorkshopAction>; onOpen: (id: string) => void; onShop: () => void }) {
+export function Storage({ state, dispatch, onOpen, onShop, embedded = false, selectedId, onManage }: { embedded?: boolean; selectedId?: string; onManage?: () => void; state: WorkshopState; dispatch: Dispatch<WorkshopAction>; onOpen: (id: string) => void; onShop: () => void }) {
   const root = useRef<HTMLElement>(null);
   const drag = useRef<DragState | null>(null);
   const hold = useRef<number | undefined>(undefined);
@@ -23,7 +24,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
   const [announcement, setAnnouncement] = useState('');
   const [requestedPage, setPage] = useState(0);
   const { ref: grid, width, height } = useElementSize<HTMLDivElement>();
-  const layout = gridLayout(width, height);
+  const layout = gridLayout(width, height, embedded);
   const pages = pageCount(state.slots.length, layout.size);
   const page = clampPage(requestedPage, pages);
   const first = page * layout.size;
@@ -67,7 +68,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
       value.ready = true; value.active = true; setVisual({ ...value });
       setAnnouncement('Machine picked up. Hold a page arrow to change pages.');
       feedback('pickup', false);
-    }, 430);
+    }, UI.gestures.storageHoldMs);
   }
   function slotAt(x: number, y: number) {
     const slot = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-slot-index]');
@@ -94,7 +95,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
           setPage(targetPage);
           setVisual({ ...value });
           setAnnouncement(`Page ${targetPage + 1}. Drop into a bay.`);
-        }, 550);
+        }, UI.gestures.pageHoldMs);
       }
     }
     setVisual({ ...value });
@@ -110,10 +111,10 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
     clear();
   }
   const dragged = visual ? machines.get(visual.id) : undefined;
-  return <section ref={root} className={`screen storage-screen ${visual?.active ? 'sorting' : ''}`} aria-label="Machine Storage"
+  return <section ref={root} className={`screen storage-screen ${embedded ? 'embedded-storage' : ''} ${visual?.active ? 'sorting' : ''}`} aria-label={embedded ? 'Workshop Storage' : 'Machine Storage'}
     onPointerDown={start} onPointerMove={move} onPointerUp={event => finish(event)} onPointerCancel={event => finish(event, true)} onLostPointerCapture={event => finish(event, true)}
     onContextMenu={event => { if ((event.target as Element).closest('[data-reorder]')) event.preventDefault(); }}>
-    <ScreenHeading title="Storage" code={`${state.machines.length} OCCUPIED / ${state.slots.length} BAYS`}><span className="storage-hint">{visual?.active ? 'Hold arrow to turn page' : 'Hold grip to move'}</span></ScreenHeading>
+    <ScreenHeading title="Storage" code={`${state.machines.length} OCCUPIED / ${state.slots.length} BAYS`}>{embedded ? <Button onClick={onManage} aria-label="Open full Storage">All bays</Button> : <span className="storage-hint">{visual?.active ? 'Hold arrow to turn page' : 'Hold grip to move'}</span>}</ScreenHeading>
     <div ref={grid} className={`storage-grid ${layout.compact ? 'compact-bays' : ''}`} style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${layout.rows}, minmax(0, 1fr))` }}>
       {state.slots.slice(first, first + layout.size).map((id, offset) => {
         const index = first + offset;
@@ -133,7 +134,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
                 setAnnouncement(`${name} moved to bay ${to + 1}.`);
               }
             }}><Icon name="grip" size={19} /></button></header>
-            <button className="machine-open" onClick={() => onOpen(entry.machine.id)} aria-label={`Operate ${name}`}>
+            <button className="machine-open" aria-pressed={selectedId === entry.machine.id} onClick={() => onOpen(entry.machine.id)} aria-label={`Operate ${name}`}>
               <div className="bay-illustration"><MachineThumbnail type={entry.machine.type} finish={tier(entry.machine).finish} /></div>
               <span className="machine-nameplate"><span className="equipment-label">{definition(entry.machine).model} / {serial(entry.number)}</span><strong>{tier(entry.machine).name}</strong></span>
               <StatusLamp running={automated(entry.machine)}>{machineStatus(entry.machine)}</StatusLamp>

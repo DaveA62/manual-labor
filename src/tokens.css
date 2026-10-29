@@ -11,7 +11,7 @@
   --panel:#f4ecd6;
   --mint-light:#b6c9b3;
   --steel-dark:#57786a;
-  --muted:#626c5e;
+  --muted:#46534b;
   --seam:#a8a78e;
   --frame:#c7c7aa;
   --heading:'Barlow Condensed','Arial Narrow',sans-serif;
@@ -25,3 +25,5 @@
 [data-finish="mint"]{--machine-paint:var(--mint);--machine-highlight:var(--mint-light);--machine-shade:var(--steel-dark)}
 [data-finish="silver"]{--machine-paint:#abb5b7;--machine-highlight:#d4d9d5;--machine-shade:#627e8d}
 [data-finish="gold"]{--machine-paint:#b79950;--machine-highlight:#d9c78c;--machine-shade:#7f7045}
+/* Backed information surfaces; these pairs are contrast tested. */
+:root{--plate-bg:var(--panel);--plate-ink:var(--charcoal);--readout-bg:var(--charcoal);--readout-ink:var(--panel)}

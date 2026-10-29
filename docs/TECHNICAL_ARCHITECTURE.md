@@ -6,7 +6,7 @@ The browser game remains React + TypeScript + Vite. SVG is the production machin
 
 | Layer | Files | Responsibility |
 | --- | --- | --- |
-| Family definitions | `src/game/definitions.ts` | Phases, automation, upgrades, shop prices, prestige tiers, fees, output, finishes |
+| Family definitions | `src/config/machines/`, `src/game/definitions.ts` registry | Phases, automation, upgrades, shop prices, prestige tiers, fees, output, finishes |
 | Instance data | `src/game/types.ts`, `machines.ts` | Persistent ID, tier, upgrades, cycle progress, lifetime record; derived prices/status |
 | Simulation | `src/game/simulation.ts` | Pure per-instance phase transitions; only collect → feed pays |
 | Workshop reducer | `src/game/engine.ts` | All instances, wallet, purchases, slots, order, atomic prestige validation |
@@ -98,3 +98,13 @@ See [BOTTLER.md](BOTTLER.md) for balance, physical controls, timing, migration a
 Bottler physical state (`size`, capacity-normalized `fill`, `valve`, residual `dripMs`, `regulated`) is validated in the v4 codec and serialized with the instance. Manual intents are load, valve delta, carriage delta, capper delta, and collect. Time-based flow runs in simulation, including manual-open-valve/drip behavior, independently of the rendered screen. Only collection changes lifetime/output counts, which the existing reducer adds to the shared wallet. Fully automated bulk simulation groups three deterministic sizes and matches subdivided ticks.
 
 Cloud schema 4 is additive; existing schema-3 rows are untouched until synchronized. The versioned migration widens the schema constraint and updates the existing service-only transactional commit to preserve schema and reject downgrades. Rules version 2 understands both families; rules v1 is accepted only for Press-only state and intent. Old pending Press receipts retain their UUIDs. Currency validation now accepts cents for exact 70% payouts; the historical `bills` field remains the aggregate completed-unit count for compatibility. No separate Bottler save, wallet, clock or offline endpoint exists.
+
+## Configuration and measured Workshop (Task 09)
+
+[CONFIGURATION.md](CONFIGURATION.md) is the tuning reference. The former definition exports remain compatible, but authoritative balance values now live in `src/config/machines/` and `config/economy.ts`. `config/production.ts` supplies the shared offline cap. These modules are plain TypeScript with no React, DOM or platform dependencies and are bundled unchanged into `game-sync`. No saved IDs, physical payload, schema version or default balance changed. Bulk Bottler timing/rate estimates derive from the same capacity sequence as ordinary ticks.
+
+`App` measures the available main content box with `useElementSize`. The `wideWorkshop` selector checks both dimensions. The machine remains in the same React position when the layout switches; its renderer gets the same runtime and saved instance. Wide mode mounts `Modifications` with an inline equipment frame and `Storage` with compact paginated bays beside it. These are presentations of the existing shared action controls, not separate economy implementations. Compact mode retains native maintenance dialogs and full Storage.
+
+`config/ui.ts` owns wide breakpoints, panel proportions, row/card sizing, touch/hold settings and common animation durations. UI-only settings never enter cloud simulation. Colors/type/materials remain solely in `tokens.css`; `config/theme.ts` specifies contrast limits. Shared `SvgPlate` components protect information from moving artwork, while decorative assemblies ignore pointer events. Native/WebView hosts retain the same measured layout and screen-to-SVG transforms.
+
+Task 09 requires no SQL migration or auth configuration. Deploy the Edge Function with the additional config dependencies before publishing the frontend; rules version 2 remains unchanged because all live production values/behavior are preserved.

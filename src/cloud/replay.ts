@@ -1,5 +1,5 @@
 import { reducer } from "../game/engine.ts";
-import { MACHINE_DEFINITIONS } from "../game/definitions.ts";
+import { ECONOMY, MACHINE_DEFINITIONS } from "../game/definitions.ts";
 import { tier } from "../game/machines.ts";
 import { decodeSave, SAVE_VERSION, validCurrency } from "../game/codec.ts";
 import type { WorkshopState } from "../game/types.ts";
@@ -159,7 +159,7 @@ export function pristineSave(state: WorkshopState) {
     state.cash === 0 &&
     state.lifetime === 0 &&
     state.bills === 0 &&
-    state.slots.length === 2 &&
+    state.slots.length === ECONOMY.startingSlots &&
     state.machines.length === 1 &&
     m.id === "press-initial" &&
     m.tier === "cash" &&
