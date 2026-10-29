@@ -1,6 +1,6 @@
 # Manual Labor
 
-A mobile-first, side-view money press tycoon. Built with React, TypeScript, Vite, CSS, and hand-drawn SVG. No external assets or game engine.
+A mobile-first, side-view money press tycoon. Built with React, TypeScript, Vite, CSS, and hand-drawn SVG. Inline machine illustrations and self-hosted fonts; no game engine.
 
 ## Run
 
@@ -25,9 +25,9 @@ Crank direction alternates each completed bill. Mouse and touch use the same cap
 
 ## Storage and machines
 
-Storage is the active workshop floor. Start with two unlocked slots and one Money Press. Tap a card to operate it. Drag the grip with a mouse, or hold it for 430 ms before dragging on touch. Cards keep native vertical scrolling; grips handle dragging. Drop on another press to swap, or into an empty slot to move. Keyboard: focus a grip and use arrow keys.
+Storage is the active workshop floor, presented as a viewport-sized, paginated bay grid. Start with two unlocked slots and one Money Press. Tap a card to operate it. Drag the grip with a mouse, or hold it for 430 ms before dragging on touch. The game frame does not scroll. Grips handle dragging; hold a page arrow to change pages during a drag. Drop on another press to swap, or into an empty slot to move. Keyboard: focus a grip and use arrow keys.
 
-Machine Shop sells additional presses for $50. Each press has its own permanent ID, cycle progress, upgrades, earnings, and bill count. New machines use the first empty slot. Upgrades are bought separately for every instance:
+Catalog sells additional presses for $50. Each press has its own permanent ID, cycle progress, upgrades, earnings, and bill count. New machines use the first empty slot. Upgrades are bought separately for every instance:
 
 | Upgrade | Price | Effect |
 | --- | --- | --- |
@@ -65,8 +65,10 @@ The workflow builds and tests pull requests, and deploys `main`. In **Settings â
 - `src/game/useGame.ts`: the single browser clock and save lifecycle.
 - `src/game/save.ts`: validation and legacy migration.
 - `src/components/Storage.tsx`: sortable slot grid and production cards.
-- `src/components/MachineShop.tsx`: machine acquisition and capacity purchases.
-- `src/components/MachineScreen.tsx`: selected instance and its upgrade shop.
+- `src/components/MachineShop.tsx`: one catalog entry per page, machine acquisition, and capacity purchases.
+- `src/components/MachineScreen.tsx`: selected instance and its contained Modifications panel.
 - `src/components/Press.tsx`: the original SVG press and pointer input.
 
-Run `npm test` for isolation, simultaneous production, all automation combinations, purchase constraints, migration, reload continuity, and save graph validation. `npm run build` typechecks and builds the production application. No additional machine types, offline earnings, or skill systems are implemented.
+The visual system is documented in [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md). Shared palette/type tokens live in `src/tokens.css`; shared equipment controls and pagination live in `src/ui/`. Workshop, Storage, Catalog, and the Modifications overlay fit the dynamic viewport. Fonts are self-hosted with retained OFL licenses.
+
+Run `npm test` for pagination, isolation, simultaneous production, all automation combinations, purchase constraints, migration, reload continuity, and save graph validation. `npm run build` typechecks and builds the production application. No additional machine types, offline earnings, or skill systems are implemented.

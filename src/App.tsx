@@ -3,55 +3,65 @@ import { Icon } from './components/Icon';
 import { MachineScreen } from './components/MachineScreen';
 import { MachineShop } from './components/MachineShop';
 import { Storage } from './components/Storage';
-import { earnings } from './game/machines';
 import { feedback } from './game/feedback';
 import { clearLegacySave } from './game/save';
 import { useGame } from './game/useGame';
+import { Button, DialogPanel } from './ui/Controls';
+import { money } from './ui/format';
 
-const money = (value: number) => '$' + value.toLocaleString('en-US');
-type Screen = 'storage' | 'workshop' | 'shop';
+type Screen = 'storage' | 'workshop' | 'catalog';
 export default function App() {
   const { state, dispatch, saved } = useGame();
-  const [screen, setScreen] = useState<Screen>('storage');
+  const [screen, setScreen] = useState<Screen>('workshop');
   const [selected, setSelected] = useState(state.machines[0].id);
   const machine = state.machines.find(item => item.id === selected) ?? state.machines[0];
   const [sound, setSound] = useState(false);
   const [payday, setPayday] = useState(0);
-  const resetDialog = useRef<HTMLDialogElement>(null);
+  const [dialog, setDialog] = useState<'settings' | 'reset' | null>(null);
   const previousLifetime = useRef(state.lifetime);
   const openMachine = useCallback((id: string) => { setSelected(id); setScreen('workshop'); }, []);
-  const openStorage = useCallback(() => setScreen('storage'), []);
-  const openShop = useCallback(() => setScreen('shop'), []);
+  const openCatalog = useCallback(() => setScreen('catalog'), []);
   useEffect(() => {
-    if (state.lifetime > previousLifetime.current) { setPayday(state.lifetime - previousLifetime.current); feedback('cash', sound); }
+    if (state.lifetime > previousLifetime.current) {
+      setPayday(state.lifetime - previousLifetime.current);
+      feedback('cash', sound);
+    }
     previousLifetime.current = state.lifetime;
   }, [state.lifetime, sound]);
   useEffect(() => {
     if (!payday) return;
-    const timer = window.setTimeout(() => setPayday(0), 1600);
+    const timer = window.setTimeout(() => setPayday(0), 1400);
     return () => window.clearTimeout(timer);
   }, [payday, state.lifetime]);
-  return <div className="app-shell">
-    <header className="topbar">
-      <a className="wordmark" href="#" onClick={openStorage} aria-label="Manual Labor home"><span className="brand-mark">m<span>l</span></span><span>MANUAL LABOR<span className="wordmark-sub">A LITTLE WORK GOES A LONG WAY.</span></span></a>
-      <div className="header-actions"><span className="local-tag"><span /> LOCAL WORKSHOP</span><button className="icon-button" onClick={() => { setSound(value => !value); if (!sound) feedback('click', true); }} aria-label={sound ? 'Mute sound' : 'Enable sound'} aria-pressed={sound}><Icon name={sound ? 'sound' : 'muted'} /></button><button className="icon-button" onClick={() => resetDialog.current?.showModal()} aria-label="Reset save"><Icon name="reset" size={20} /></button></div>
+  return <div className="game-shell" data-screen={screen}>
+    <header className="game-header">
+      <button className="wordmark" onClick={() => setScreen('workshop')} aria-label="Manual Labor Workshop">
+        <span className="brand-stamp" aria-hidden="true">M/L</span><span>MANUAL LABOR<small>QUESTIONABLY FUNCTIONAL</small></span>
+      </button>
+      <div className="header-cash" aria-label="Available cash" title={`${money(state.lifetime)} lifetime earnings`}>
+        <span className="equipment-label">CASH</span><strong>{money(state.cash)}</strong>
+        {payday > 0 && <span className="payday" key={state.lifetime}>+{money(payday)}</span>}
+      </div>
+      <Button className="square-control header-settings" aria-label="Settings" onClick={() => setDialog('settings')}><Icon name="settings" /></Button>
     </header>
-    <main>
-      <section className="intro-row"><div><div className="eyebrow">YOUR SHIFT STARTS HERE</div><h1>Made by hand.<br className="mobile-break" /> <span>For now.</span></h1><p>Work the press. Make a little money. Work a little less.</p></div><div className="shift-note"><span className="tiny-cross">✳</span><span>NO BOSS.<br />JUST THE MACHINES.</span></div></section>
-      <section className="stats-bar" aria-label="Workshop earnings">
-        <div className="cash-stat"><span className="stat-label">AVAILABLE CASH</span><strong>{money(state.cash)}</strong>{payday > 0 && <span className="payday" key={state.lifetime}>+{money(payday)}</span>}</div>
-        <div><span className="stat-label">LIFETIME EARNINGS</span><strong>{money(state.lifetime)}</strong></div>
-        <div><span className="stat-label">{screen === 'workshop' ? 'THIS PRESS / BILL' : 'MACHINES'}</span><strong>{screen === 'workshop' ? money(earnings(machine)) : `${state.machines.length}/${state.slots.length}`}</strong></div>
-        <div className="printed-stat"><span className="stat-label">BILLS PRINTED</span><strong>{state.bills.toLocaleString()}</strong></div>
-        <div className="save-status"><span className={saved ? 'status-dot' : 'status-dot warning'} />{saved ? 'Progress saved' : 'Saving unavailable'}</div>
-      </section>
-      {!saved && <p className="save-warning" role="status">Browser storage is unavailable. Progress will last only for this session.</p>}
-      <nav className="workshop-tabs" aria-label="Workshop sections"><button aria-current={screen === 'storage' ? 'page' : undefined} onClick={openStorage}>Storage <span>{state.machines.length}/{state.slots.length}</span></button><button aria-current={screen === 'workshop' ? 'page' : undefined} onClick={() => setScreen('workshop')}>Workshop</button><button aria-current={screen === 'shop' ? 'page' : undefined} onClick={openShop}>Machine Shop</button></nav>
-      {screen === 'storage' && <Storage state={state} dispatch={dispatch} onOpen={openMachine} onShop={openShop} />}
-      {screen === 'shop' && <MachineShop state={state} dispatch={dispatch} onStorage={openStorage} />}
-      {screen === 'workshop' && <MachineScreen key={machine.id} state={machine} cash={state.cash} number={state.machines.indexOf(machine) + 1} dispatch={dispatch} sound={sound} onStorage={openStorage} />}
-      <footer className="page-footer"><span>MANUAL LABOR <span className="footer-version">/ VOL. 002</span></span><span>A little more floor. A little less work. <span className="footer-spark">✳</span></span></footer>
+    <nav className="primary-nav" aria-label="Primary navigation">
+      {([{ id: 'workshop', label: 'Workshop', icon: 'workshop' }, { id: 'storage', label: 'Storage', icon: 'storage' }, { id: 'catalog', label: 'Catalog', icon: 'catalog' }] as const).map(item =>
+        <button key={item.id} aria-current={screen === item.id ? 'page' : undefined} onClick={() => setScreen(item.id)}><Icon name={item.icon} /><span>{item.label}</span>{item.id === 'storage' && <small>{state.machines.length}/{state.slots.length}</small>}</button>)}
+    </nav>
+    <main className="game-content">
+      {!saved && <div className="save-warning" role="status">Saving unavailable. Session progress only.</div>}
+      {screen === 'storage' && <Storage state={state} dispatch={dispatch} onOpen={openMachine} onShop={openCatalog} />}
+      {screen === 'catalog' && <MachineShop state={state} dispatch={dispatch} />}
+      {screen === 'workshop' && <MachineScreen key={machine.id} state={machine} cash={state.cash} number={state.machines.indexOf(machine) + 1} dispatch={dispatch} sound={sound} />}
     </main>
-    <dialog ref={resetDialog} className="reset-dialog"><form method="dialog"><div className="eyebrow">A CLEAN WORKBENCH</div><h2>Start a new shift?</h2><p>This clears all machines, slots, upgrades, cash, and lifetime earnings saved on this browser.</p><div className="dialog-actions"><button value="cancel" className="secondary-button" autoFocus>Keep working</button><button value="reset" className="danger-button" onClick={() => { clearLegacySave(); dispatch({ type: 'reset' }); setScreen('storage'); setSelected('press-initial'); setPayday(0); }}>Reset everything</button></div></form></dialog>
+    <DialogPanel open={dialog === 'settings'} onClose={() => setDialog(null)} title="Workshop record" code="CONTROL PANEL / 01" className="settings-dialog">
+      <dl className="record-grid"><div><dt>Lifetime earnings</dt><dd>{money(state.lifetime)}</dd></div><div><dt>Bills printed</dt><dd>{state.bills.toLocaleString()}</dd></div><div><dt>Storage</dt><dd>{state.machines.length} / {state.slots.length}</dd></div><div><dt>Save</dt><dd>{saved ? 'LOCAL / OK' : 'UNAVAILABLE'}</dd></div></dl>
+      <div className="settings-actions"><Button aria-pressed={sound} onClick={() => { setSound(value => !value); if (!sound) feedback('click', true); }}><Icon name={sound ? 'sound' : 'muted'} size={20} />Sound {sound ? 'on' : 'off'}</Button><Button tone="danger" onClick={() => setDialog('reset')}><Icon name="reset" size={18} />Reset save</Button></div>
+      <span className="inspection-stamp">INSPECTION STATUS: PENDING</span>
+    </DialogPanel>
+    <DialogPanel open={dialog === 'reset'} onClose={() => setDialog(null)} title="Reset workshop?" code="DELETE LOCAL SAVE" className="reset-dialog">
+      <p className="dialog-copy">Deletes all machines, upgrades, cash, and production progress.</p>
+      <div className="settings-actions"><Button onClick={() => setDialog(null)}>Cancel</Button><Button tone="danger" onClick={() => { clearLegacySave(); dispatch({ type: 'reset' }); setScreen('workshop'); setSelected('press-initial'); setPayday(0); setDialog(null); }}>Reset everything</Button></div>
+    </DialogPanel>
   </div>;
 }

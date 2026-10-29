@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { automated, direction, earnings } from '../game/machines';
 import type { ManualAction, MachineInstance } from '../game/types';
@@ -12,6 +12,18 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
   const [visual, setVisual] = useState<Drag | null>(null);
   const [rotation, setRotation] = useState(0);
   const [impact, setImpact] = useState(0);
+  const [hitSize, setHitSize] = useState(110);
+  useEffect(() => {
+    const element = svg.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      const { width, height } = element.getBoundingClientRect();
+      const scale = Math.min(width / 720, height / 510);
+      if (scale > 0) setHitSize(Math.max(88, 44 / scale));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const auto = automated(state);
   const isTurning = state.phase === 'raise' || state.phase === 'lift';
   const headY = state.phase === 'stamp' ? 208 + (auto ? state.progress * 132 : 0) : state.phase === 'collect' ? 208 : isTurning ? 340 - state.progress * 132 : 340;
@@ -63,13 +75,13 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
     if (cancel) return;
     if (d.kind === 'paper' && active('paper')) {
       if (inPlate(p.x, p.y)) { dispatch({ type: 'feed' }); feedback('click', sound); }
-      else onHint('Drop the paper on the center plate.');
+      else onHint('Drop paper on the plate.');
     }
     if (d.kind === 'bill' && active('bill')) {
       if (inTray(p.x, p.y)) dispatch({ type: 'collect' });
-      else onHint('Drop the printed bill in the tray on the right.');
+      else onHint('Drop bill in the right tray.');
     }
-    if (d.kind === 'head' && state.phase === 'stamp') onHint('Pull farther and faster — give it a good stamp!');
+    if (d.kind === 'head' && state.phase === 'stamp') onHint('Pull down farther and faster.');
   }
   function keyboard(kind: Drag['kind']) {
     if (!active(kind)) return;
@@ -101,7 +113,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
         <path d="M0 126h720M0 248h720M0 370h720M94 0v126m184 0v122m183-248v126m177 0v122M94 248v122m367-122v122" />
         <rect x="34" y="74" width="118" height="88" rx="4" /><path d="M43 84h100v12H43zM57 101v43m29-43v34m28-34v43M50 123h14m15-7h14m14 7h14" />
       </g>
-      <g transform="translate(580 90) rotate(5)"><rect width="91" height="62" fill="#e8e3cb" stroke="#c9c5af" /><path d="M31 1h31" stroke="#bcb89b" strokeWidth="8" /><text x="45" y="27" textAnchor="middle" fill="#797c65" fontSize="9" fontWeight="bold" letterSpacing="1">WORK SMART.</text><text x="45" y="43" textAnchor="middle" fill="#797c65" fontSize="9" fontWeight="bold" letterSpacing="1">THEN LESS.</text></g>
+      <g transform="translate(580 90) rotate(5)"><rect width="91" height="62" fill="#e8e3cb" stroke="#c9c5af" /><path d="M31 1h31" stroke="#bcb89b" strokeWidth="8" /><text x="45" y="27" textAnchor="middle" fill="#797c65" fontSize="9" fontWeight="bold" letterSpacing="1">LOAD RATING</text><text x="45" y="43" textAnchor="middle" fill="#797c65" fontSize="9" fontWeight="bold" letterSpacing="1">APPROXIMATE</text></g>
       <ellipse cx="367" cy="460" rx="310" ry="20" fill="#2f4230" opacity=".07" />
       <path d="M17 428H703v20H17z" fill="url(#wood)" stroke="#8d785f" strokeWidth="2" /><path d="M17 432h686M32 440h199m250 0h188" stroke="#d1b899" />
       <path d="M41 448h26l-6 62H44zm612 0h26l-2 62h-18z" fill="#758174" /><path d="M67 470h586" stroke="#9aa18c" strokeWidth="8" />
@@ -121,7 +133,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
         <path d="M272 414h167v9H272z" fill="url(#hatch)" />
         {state.phase !== 'feed' && state.phase !== 'collect' && <g className="loaded-paper" transform="translate(291 383) scale(1 .2)">{bill(0, 0, state.phase === 'lift')}</g>}
         <g transform={`translate(0 ${draggedHeadY})`} {...controls('head', 'Stamp paper: drag the raised head down quickly, or press Enter', `press-head ${visual?.kind === 'head' ? 'dragging' : ''}`)}>
-          <rect x="267" y="-9" width="176" height="82" rx="8" fill="transparent" />
+          <rect x={355 - Math.max(176, hitSize) / 2} y={32 - Math.max(82, hitSize) / 2} width={Math.max(176, hitSize)} height={Math.max(82, hitSize)} rx="8" fill="transparent" />
           <path d="M279 0h153l9 35H270z" fill="url(#iron)" stroke="#345141" strokeWidth="3" />
           <path d="M274 35h164v10H274z" fill="#2d473b" /><path d="M285 8h140" stroke="#aec19e" strokeWidth="3" />
           <rect x="326" y="15" width="58" height="15" rx="3" fill="#2d483b" /><path d="M337 45v12h36V45" fill="none" stroke="#384e3e" strokeWidth="9" />
@@ -143,7 +155,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
         {isTurning && <text x="556" y="375" textAnchor="middle" fontSize="24" fill="#9c683f">{direction(state) === 1 ? '↻' : '↺'} <tspan fontSize="12" fontWeight="bold">{Math.round(state.progress * 100)}%</tspan></text>}
       </g>
       <g {...controls('paper', 'Load blank paper: drag from the stack to the plate, or press Enter')}>
-        <rect x="27" y="333" width="156" height="94" rx="10" fill="transparent" />
+        <rect x={105 - Math.max(156, hitSize) / 2} y={380 - Math.max(94, hitSize) / 2} width={Math.max(156, hitSize)} height={Math.max(94, hitSize)} rx="10" fill="transparent" />
         {[7, 3, 0].map(n => <g key={n}>{bill(49 - n / 2, 365 + n)}</g>)}
         {visual?.kind !== 'paper' && bill(51, 353)}
         {state.phase === 'feed' && !auto && <path className="feed-guide" d="M183 373q40-30 78 0m-10-12 10 12-15 3" fill="none" stroke="#bd8657" strokeWidth="2" strokeDasharray="5 4" />}
@@ -155,7 +167,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
         <rect x="577" y="411" width="78" height="13" rx="2" fill="#e1dfc8" /><text x="616" y="421" textAnchor="middle" fontSize="8" fill="#58634e" fontWeight="bold" letterSpacing="1">COLLECTION</text>
         {state.phase === 'collect' && <rect x="535" y="365" width="165" height="72" rx="8" fill="none" stroke="#a0b86d" strokeWidth="2" strokeDasharray="6 5" />}
       </g>
-      {state.phase === 'collect' && visual?.kind !== 'bill' && <g {...controls('bill', 'Collect finished bill: drag it into the right tray, or press Enter')}>{bill(293, 349, true)}</g>}
+      {state.phase === 'collect' && visual?.kind !== 'bill' && <g {...controls('bill', 'Collect finished bill: drag it into the right tray, or press Enter')}><rect x={351 - Math.max(116, hitSize) / 2} y={375.5 - Math.max(53, hitSize) / 2} width={Math.max(116, hitSize)} height={Math.max(53, hitSize)} fill="transparent" />{bill(293, 349, true)}</g>}
       {visual?.kind === 'paper' && <g pointerEvents="none" filter="url(#shadow)">{bill(visual.x - 58, visual.y - 26)}</g>}
       {visual?.kind === 'bill' && <g pointerEvents="none" filter="url(#shadow)">{bill(visual.x - 58, visual.y - 26, true)}</g>}
       {state.phase === 'lift' && impact > 0 && <g key={impact} className="stamp-burst" stroke="#d5a055" strokeWidth="3"><path d="m272 381-22-12m18 22h-29m206-10 22-12m-18 22h29" /></g>}

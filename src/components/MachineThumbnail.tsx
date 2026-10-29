@@ -1,22 +1,28 @@
+/** Catalog/bay illustration only. The interactive press artwork is maintained separately. */
 export function MachineThumbnail() {
-  return <svg viewBox="0 0 240 160" className="machine-thumbnail" aria-hidden="true" fill="none">
-    <ellipse cx="120" cy="143" rx="91" ry="8" fill="#344c36" opacity=".08" />
-    <path d="M35 139h170v8H35z" fill="#b29a79" />
-    <path d="M73 36h12v96H73zm76 0h12v96h-12z" fill="#75917b" stroke="#45644f" strokeWidth="2" />
-    <path d="M65 23h105v21H65z" fill="#58765f" stroke="#3c5b46" strokeWidth="2" />
-    <path d="M70 26h95" stroke="#9eaf90" strokeWidth="3" />
-    <path d="M111 44h12v47h-12z" fill="#b8c3aa" stroke="#688267" />
-    <path d="m111 52 12-3m-12 12 12-3m-12 12 12-3m-12 12 12-3" stroke="#799073" />
-    <path d="M92 88h51l6 18H86z" fill="#6a886d" stroke="#3d5b46" strokeWidth="2" />
-    <path d="M105 106v7h25v-7" stroke="#405d47" strokeWidth="4" />
-    <path d="M84 126h64v7H84zM68 133h100v6H68z" fill="#49694e" />
-    <path d="M96 122h40v4H96z" fill="#b4cf85" />
-    <path d="M161 86h24" stroke="#8f9f82" strokeWidth="5" />
-    <circle cx="185" cy="86" r="25" fill="#e0e5d0" stroke="#47664c" strokeWidth="4" />
-    <path d="M185 62v48m-21-36 42 24m-42 0 42-24" stroke="#69836a" strokeWidth="4" />
-    <circle cx="185" cy="86" r="7" fill="#9fac8d" stroke="#49664c" strokeWidth="2" />
-    <rect x="205" y="77" width="8" height="18" rx="4" fill="#c08052" stroke="#8c5c39" />
-    <path d="M22 124h37v14H22z" fill="#c1d09f" stroke="#829765" />
-    <path d="M176 127h39v11h-39z" fill="#9cae8b" stroke="#7f9471" />
+  return <svg viewBox="0 0 280 190" className="machine-thumbnail" aria-hidden="true" fill="none" stroke="var(--charcoal)" strokeWidth="3" strokeLinejoin="round">
+    <path d="M28 166h224v13H28z" fill="var(--frame)" />
+    <path d="M78 42h17v116H78zm102 0h17v116h-17z" fill="var(--mint)" />
+    <path d="M67 25h143v28H67z" fill="var(--mint)" />
+    <path d="M74 31h130" stroke="var(--mint-light)" strokeWidth="3" />
+    <path d="M130 53h17v57h-17z" fill="var(--frame)" />
+    <path d="m131 64 15-4m-15 16 15-4m-15 16 15-4m-15 16 15-4" strokeWidth="2" />
+    <path d="M104 106h69l7 22H97z" fill="var(--mint)" />
+    <path d="M123 128v10h32v-10" strokeWidth="6" />
+    <path d="M93 151h86v8H93zM72 159h132v8H72z" fill="var(--steel-dark)" />
+    <path d="M111 147h46v4h-46z" fill="var(--paper)" strokeWidth="2" />
+    <path d="M197 100h31" strokeWidth="7" />
+    <circle cx="227" cy="100" r="29" fill="var(--panel)" />
+    <path d="M227 72v56m-24-42 48 28m-48 0 48-28" strokeWidth="5" />
+    <circle cx="227" cy="100" r="8" fill="var(--mint)" />
+    <rect x="250" y="89" width="10" height="23" rx="2" fill="var(--orange)" />
+    <path d="M8 151h44v15H8z" fill="var(--mint-light)" strokeWidth="2" />
+    <path d="M219 155h46v11h-46z" fill="var(--frame)" strokeWidth="2" />
+    <rect x="106" y="32" width="64" height="14" fill="var(--panel)" strokeWidth="1.5" />
+    <text x="138" y="42" textAnchor="middle" fill="var(--charcoal)" stroke="none" fontFamily="var(--heading)" fontSize="10" letterSpacing="2">MP—01</text>
+    <path d="M79 31h10m-10 5h7m99 43h11m-11 6h7M105 114h8m-12 4h10" stroke="var(--paper)" strokeWidth="2" />
+    <path d="m80 128 13-3v17H80z" fill="var(--panel)" strokeWidth="2" />
+    <path d="M171 35h8v5h-8" fill="var(--red)" strokeWidth="1.5" />
+    {[ [77,39], [199,39], [86,150], [188,150] ].map(([x,y]) => <g key={`${x}-${y}`}><circle cx={x} cy={y} r="3" fill="var(--charcoal)" stroke="none" /><path d={`M${x-2} ${y}h4`} stroke="var(--panel)" strokeWidth="1" /></g>)}
   </svg>;
 }

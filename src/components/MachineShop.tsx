@@ -1,16 +1,28 @@
+import { useState } from 'react';
 import type { Dispatch } from 'react';
 import { MACHINE_DEFINITIONS, slotPrice } from '../game/definitions';
 import type { WorkshopAction, WorkshopState } from '../game/types';
 import { MachineThumbnail } from './MachineThumbnail';
-import { Icon } from './Icon';
 import { newMachineId } from '../game/machines';
+import { Button, Pager, ScreenHeading } from '../ui/Controls';
+import { money, serial } from '../ui/format';
+import { clampPage } from '../ui/pagination';
 
-const money = (value: number) => '$' + value.toLocaleString('en-US');
-export function MachineShop({ state, dispatch, onStorage }: { state: WorkshopState; dispatch: Dispatch<WorkshopAction>; onStorage: () => void }) {
+export function MachineShop({ state, dispatch }: { state: WorkshopState; dispatch: Dispatch<WorkshopAction> }) {
+  const [requestedPage, setPage] = useState(0);
+  const entries = Object.values(MACHINE_DEFINITIONS);
+  const page = clampPage(requestedPage, entries.length);
+  const config = entries[page];
   const free = state.slots.filter(id => id === null).length;
   const cost = slotPrice(state.slots.length);
-  return <section className="shop-panel" aria-label="Machine Shop"><div className="section-heading"><div><div className="eyebrow">MAKE ROOM FOR MORE</div><h2>Machine Shop</h2><p>{free} available {free === 1 ? 'slot' : 'slots'} · {state.machines.length}/{state.slots.length} occupied</p></div><button className="outline-button" onClick={onStorage}>← Storage</button></div>
-    <div className="shop-grid">{Object.values(MACHINE_DEFINITIONS).map(config => <article className="shop-card" key={config.type}><span className="slot-label">WORKSHOP CLASSIC</span><MachineThumbnail /><h3>{config.name}</h3><p>A fresh press with its own upgrades and production cycle. Buy as many as your floor can hold.</p><div className="shop-spec"><span>{money(config.baseEarnings)} per bill</span><span>{state.machines.filter(machine => machine.type === config.type).length} owned</span></div><button className={`purchase ${free > 0 && state.cash >= config.price ? 'can-buy' : ''}`} disabled={free === 0 || state.cash < config.price} onClick={() => dispatch({ type: 'buy-machine', machineType: config.type, id: newMachineId() })} aria-label={`Buy ${config.name} for ${money(config.price)}`}><span>{money(config.price)}</span><span>{free === 0 ? 'Storage full' : state.cash < config.price ? `${money(config.price - state.cash)} to go` : 'Buy machine +'}</span></button><p className="shop-note">Purchases fill the first empty slot. New machines start without upgrades.</p></article>)}</div>
-    <div className="capacity-banner"><span className="capacity-icon"><Icon name="collect" size={28} /></span><div><h3>{free === 0 ? 'Your floor is full.' : 'A little extra space.'}</h3><p>Add a storage slot for {money(cost)}. The next slot costs {money(slotPrice(state.slots.length + 1))}.</p></div><button className="solid-button" disabled={state.cash < cost || !Number.isSafeInteger(cost)} onClick={() => dispatch({ type: 'buy-slot' })} aria-label={`Unlock storage slot for ${money(cost)}`}>Unlock slot <span>{money(cost)}</span></button></div>
+  return <section className="screen catalog-screen" aria-label="Catalog">
+    <ScreenHeading title="Catalog" code="INDUSTRIAL EQUIPMENT"><span className="capacity-plate">{free} FREE {free === 1 ? 'BAY' : 'BAYS'}</span></ScreenHeading>
+    <article className="catalog-entry">
+      <div className="catalog-entry-heading"><span className="catalog-number">{serial(page + 1)}</span><div><span className="equipment-label">MODEL {config.model}</span><h2>{config.name}</h2></div><span className="owned-label">{state.machines.filter(machine => machine.type === config.type).length} OWNED</span></div>
+      <div className="catalog-illustration"><span className="catalog-watermark" aria-hidden="true">MP—01</span><MachineThumbnail /><span className="inspection-stamp">CONDITION: OPERABLE</span></div>
+      <div className="catalog-spec"><span>OUTPUT<strong>{money(config.baseEarnings)} / bill</strong></span><span>OPERATION<strong>Manual</strong></span><span>SUPPLIED<strong>No modifications</strong></span></div>
+      <div className="catalog-purchase"><div><span className="equipment-label">UNIT PRICE</span><strong>{money(config.price)}</strong></div><Button tone="primary" disabled={free === 0 || state.cash < config.price} onClick={() => dispatch({ type: 'buy-machine', machineType: config.type, id: newMachineId() })} aria-label={`Buy ${config.name} for ${money(config.price)}`}>{free === 0 ? 'No free bays' : state.cash < config.price ? `Need ${money(config.price - state.cash)}` : 'Purchase machine'}<span>{money(config.price)}</span></Button></div>
+    </article>
+    <footer className="screen-footer"><div className="capacity-control"><span>{state.machines.length}/{state.slots.length} BAYS</span><Button disabled={state.cash < cost || !Number.isSafeInteger(cost)} onClick={() => dispatch({ type: 'buy-slot' })} aria-label={`Unlock storage slot for ${money(cost)}`}>Add bay <strong>{money(cost)}</strong></Button></div><Pager page={page} pages={entries.length} onChange={setPage} /></footer>
   </section>;
 }

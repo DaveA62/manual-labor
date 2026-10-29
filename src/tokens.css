@@ -1,0 +1,23 @@
+@font-face{font-family:'Barlow Condensed';src:url('./assets/fonts/barlow-condensed-latin-700-normal.woff2') format('woff2');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('./assets/fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('./assets/fonts/ibm-plex-sans-latin-500-normal.woff2') format('woff2');font-style:normal;font-weight:500;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url('./assets/fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2');font-style:normal;font-weight:600;font-display:swap}
+:root{
+  --paper:#e8ddbf;
+  --charcoal:#303b3b;
+  --orange:#e7a343;
+  --mint:#78a58a;
+  --red:#cb5948;
+  --panel:#f4ecd6;
+  --mint-light:#b6c9b3;
+  --steel-dark:#57786a;
+  --muted:#626c5e;
+  --seam:#a8a78e;
+  --frame:#c7c7aa;
+  --heading:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'IBM Plex Sans',Arial,sans-serif;
+  --line:2px solid var(--charcoal);
+  --corner:2px;
+  --target:44px;
+  --gap:12px;
+}
