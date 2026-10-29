@@ -1,0 +1,16 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select plan(10);
+select is((select count(*)::integer from pg_class where relnamespace='public'::regnamespace and relname in ('ml_saves','ml_save_snapshots','ml_save_receipts','ml_shift_reports') and relrowsecurity),4,'RLS on all player tables');
+select ok(not has_table_privilege('anon','public.ml_saves','SELECT'),'Unauthenticated reads denied');
+select ok(not has_table_privilege('authenticated','public.ml_saves','UPDATE'),'Client wallet writes denied');
+select ok(not has_table_privilege('authenticated','public.ml_saves','INSERT'),'Client save inserts denied');
+select ok(not has_table_privilege('authenticated','public.ml_saves','DELETE'),'Client deletes denied');
+select ok(not has_function_privilege('authenticated','public.ml_commit(uuid,bigint,jsonb)','EXECUTE'),'Client commit RPC denied');
+select ok(not has_function_privilege('anon','public.ml_read(uuid,uuid)','EXECUTE'),'Unauthenticated server RPC denied');
+select ok(has_function_privilege('service_role','public.ml_commit(uuid,bigint,jsonb)','EXECUTE'),'Backend may commit');
+select is((select count(*)::integer from pg_policies where schemaname='public' and tablename in ('ml_saves','ml_save_snapshots','ml_save_receipts','ml_shift_reports') and cmd='SELECT'),4,'Owner SELECT policies exist');
+select ok(not has_table_privilege('authenticated','public.ml_save_snapshots','UPDATE'),'Recovery snapshots are immutable to players');
+select * from finish();
+rollback;

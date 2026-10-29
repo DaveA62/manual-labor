@@ -10,8 +10,8 @@ The browser game remains React + TypeScript + Vite. SVG is the production machin
 | Instance data | `src/game/types.ts`, `machines.ts` | Persistent ID, tier, upgrades, cycle progress, lifetime record; derived prices/status |
 | Simulation | `src/game/simulation.ts` | Pure per-instance phase transitions; only collect → feed pays |
 | Workshop reducer | `src/game/engine.ts` | All instances, wallet, purchases, slots, order, atomic prestige validation |
-| Save codec | `src/game/save.ts` | v1/v2 migration, v3 validation/serialization; injectable storage |
-| Session host | `src/game/useGame.ts`, `src/runtime/clock.ts` | One 50ms clock, immediate economy saves, 1s motion checkpoints, lifecycle flush |
+| Save codec | `src/game/codec.ts`, `save.ts` | Pure v1/v2 migration and v3 validation/serialization; injectable storage wrapper |
+| Session host | `src/game/useGame.ts`, `src/cloud/session.ts`, `src/runtime/clock.ts` | One 50ms foreground clock, local checkpoints, account journals, cloud reconciliation and lifecycle flush |
 | React UI | `src/App.tsx`, `src/components/`, `src/ui/` | Navigation, HUD, Storage, Catalog, Modifications, accessible dialogs |
 | Renderer interface | `src/runtime/machine.ts`, `useMachineRuntime.ts` | Selected instance snapshots, scoped manual intent, feedback and hints |
 | Platform ports | `src/platform/` | Storage, activity/monotonic clock, optional sound/haptics |
@@ -24,9 +24,9 @@ Input becomes a `ManualAction` through the runtime. Its bound machine ID becomes
 
 The simulation and reducer use plain TypeScript values; they import no React, DOM, Phaser, storage, audio, or native SDKs. Many stored machines advance together even when their UI is unmounted. Partial automation stops at manual input. Reordering changes slots only. Prestige keeps the original instance ID, array position/serial, bay, and lifetime statistics.
 
-`createProductionClock` reads the platform's monotonic time and activity. It caps a running tick at 250ms and resets its time origin on every activity change. Suspended/hidden time earns nothing. A renderer RAF, Phaser update, tween, or texture callback never ticks production. React Strict Mode and renderer teardown must leave one session clock and no orphan scene listeners.
+`createProductionClock` reads the platform's monotonic time and activity. It caps a running tick at 250ms and resets its time origin on every activity change. Suspended/hidden time stops foreground ticks; the authenticated backend separately claims eligible offline production. A renderer RAF, Phaser update, tween, or texture callback never ticks production. React Strict Mode and renderer teardown must leave one session clock and no orphan scene listeners.
 
-`useGame` writes economy/order changes immediately and checkpoints motion once a second. Lifecycle events flush dirty state. Browser visibility, pagehide, and pageshow map to the lifecycle port. Saves retain the existing `manual-labor:save:v2` key and v3 payload. This task changes no save schema, migration, tier balance, automation durations, or purchasing rules.
+`GameSession`, observed by the small `useGame` React adapter, writes economy/order changes immediately and checkpoints motion once a second. Lifecycle events flush dirty state. Browser visibility, pagehide, and pageshow map to the lifecycle port. Saves retain the existing `manual-labor:save:v2` key and v3 payload. The v3 game payload, tier balance, automation durations, and purchasing rules remain intact. Cloud envelopes add revisions, journal events, request receipts and server timestamps outside the game payload.
 
 ## Platform adapters
 
@@ -76,3 +76,17 @@ Official API references for the pinned implementation:
 - [Phaser input](https://docs.phaser.io/phaser/concepts/input)
 - [Phaser TextureManager](https://docs.phaser.io/api-documentation/3.88.2/class/textures-texturemanager)
 - [Game teardown](https://docs.phaser.io/api-documentation/class/game)
+
+## Authentication, cloud saves and offline production (Task 07)
+
+The permanent deployment/security instructions are in [SUPABASE_SETUP.md](SUPABASE_SETUP.md). Supabase Auth automatically creates a guest when no session exists, persists/refreshes it, and supports PKCE Google/email flows. Guest identity upgrades retain the player UUID; existing-account sign-in never merges save rows. React owns the compact Account and Shift Report dialogs.
+
+`cloud/session.ts` coordinates the existing reducer, a window/account-scoped outbox, local recovery snapshots, session changes and an optimistic cache. Meaningful actions synchronize after a debounce; foreground checkpoints synchronize every ten seconds. Hidden windows do not continue cloud checkpoint heartbeats, preserving the eight-hour offline limit. Requests are persisted before transmission and retried with the same UUID. Actions entered during a request remain in the journal and are rebased onto the canonical response. Stale revisions stop uploads until an explicit conflict choice; a device fork remains local.
+
+`cloud/server.ts` and `cloud/replay.ts` run in the Edge Function without React, renderer or browser imports. The authenticated `game-sync` handler verifies the JWT with `auth.getUser`, derives its owner ID, reads database time, advances the shared simulation, and replays validated game actions. Client positions of events are clamped within the server's allowed elapsed-time budget. Client-provided elapsed time, payout totals and replacement balances are never used. An initial validated legacy snapshot is accepted once for compatibility; subsequent state changes require shared reducer actions.
+
+A service-role-only transactional RPC serializes each player, checks the expected revision, saves the previous revision, applies the new snapshot/checkpoint/report, and records the request receipt atomically. RLS restricts player table reads to the owner, while direct writes and privileged RPC execution are revoked from browser roles. Report acknowledgement is a separate nonfinancial operation. Retrying a committed request returns its receipt; concurrent stale requests conflict. The server advances at 100% for at most eight hours and consumes the entire wall-clock gap even when capped. Partial automation stops at manual input. Each instance keeps its own rules, tier, upgrades and statistics.
+
+Local-only offline calculation is explicitly unverified and remains in its own device branch. A pre-offline snapshot is retained for a safe initial import; device-only money is never silently uploaded to cloud currency. A Shift Report contains already-applied earnings, and Collect only acknowledges it.
+
+The economy is not claimed to be cheat-proof: historical legacy balances and human-origin manual actions cannot be proved by this architecture. New families and rule changes must be validated in the shared replay/simulation and deployed to server and client with the same RULES_VERSION. Future Capacitor/desktop adapters must provide redirect/deep-link and protected auth-session handling, ordered persistence and lifecycle integration. No native projects are added.

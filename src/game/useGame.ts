@@ -1,31 +1,65 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { reducer } from './engine';
-import { readSave, writeSave } from './save';
-import { getPlatform } from '../platform';
-import { createProductionClock } from '../runtime/clock';
-
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { getPlatform } from "../platform";
+import { GameSession } from "../cloud/session";
+import { cloudTransport, ensureGuest, supabase } from "../cloud/client";
 export function useGame() {
-  const host = getPlatform();
-  const [state, dispatch] = useReducer(reducer, undefined, () => readSave(host.storage));
-  const [saved, setSaved] = useState(true);
-  const latest = useRef(state);
-  const dirty = useRef(true);
-  useEffect(() => { latest.current = state; dirty.current = true; }, [state]);
-  // Economy and ordering changes commit immediately. Motion checkpoints at most once a second.
-  useEffect(() => { setSaved(writeSave(state, host.storage)); dirty.current = false; }, [state.cash, state.lifetime, state.slots]);
+  const [session] = useState(() => new GameSession(getPlatform()));
+  const view = useSyncExternalStore(session.subscribe, session.getSnapshot);
   useEffect(() => {
-    function flush() {
-      if (dirty.current) { setSaved(writeSave(latest.current, host.storage)); dirty.current = false; }
+    session.start();
+    let live = true;
+    let unsubscribe: undefined | (() => void);
+    const params = new URLSearchParams(location.search);
+    let authReturnHandled = false;
+    const authError = params.get("error_description");
+    if (authError) {
+      session.setAuthNotice(
+        /already|identity.*exist/i.test(authError)
+          ? "Login already linked. Sign in to that account; saves stay separate."
+          : authError.slice(0, 400),
+      );
+      for (const key of ["error", "error_description", "error_code"])
+        params.delete(key);
+      history.replaceState(
+        null,
+        "",
+        `${location.pathname}${params.size ? "?" + params.toString() : ""}`,
+      );
     }
-    const interval = globalThis.setInterval(flush, 1000);
-    const unsubscribe = host.lifecycle.subscribe(flush);
-    return () => { globalThis.clearInterval(interval); unsubscribe(); flush(); };
-  }, []);
-  useEffect(() => {
-    // One clock owns every stored instance, independent of which screen is mounted.
-    const clock = createProductionClock(host.lifecycle, elapsedMs => dispatch({ type: 'tick', elapsedMs }));
-    const interval = globalThis.setInterval(clock.advance, 50);
-    return () => { globalThis.clearInterval(interval); clock.dispose(); };
-  }, []);
-  return { state, dispatch, saved };
+    try {
+      const client = supabase();
+      if (client) {
+        const transport = cloudTransport(client);
+        const { data } = client.auth.onAuthStateChange((event, next) => {
+          if (
+            !authReturnHandled &&
+            (event === "PASSWORD_RECOVERY" ||
+              (params.get("auth") === "recovery" && next?.user) ||
+              (params.get("auth") === "verify" &&
+                next?.user.email_confirmed_at))
+          ) {
+            authReturnHandled = true;
+            session.setRecovery(true);
+          }
+          queueMicrotask(() => {
+            if (live) void session.attach(next?.user ?? null, transport);
+          });
+        });
+        unsubscribe = () => data.subscription.unsubscribe();
+        void ensureGuest(client).catch((error) => {
+          if (live) session.authError(error.message);
+        });
+      }
+    } catch (error) {
+      session.authError(
+        error instanceof Error ? error.message : "Account service unavailable.",
+      );
+    }
+    return () => {
+      live = false;
+      unsubscribe?.();
+      session.stop();
+    };
+  }, [session]);
+  return { ...view, dispatch: session.dispatch, session };
 }

@@ -2,6 +2,10 @@ import type { GamePlatform } from './contracts.ts';
 import { feedback } from './browserFeedback.ts';
 /** Browser / future WebView host. No APIs are accessed until a service is called. */
 export const browserPlatform: GamePlatform = {
+  sessionId() {
+    try { const key='manual-labor:window'; let id=sessionStorage.getItem(key); if(!id){id=Math.random().toString(36).slice(2);sessionStorage.setItem(key,id);}return id; }
+    catch { return Math.random().toString(36).slice(2); }
+  },
   storage: {
     getItem: key => globalThis.localStorage.getItem(key),
     setItem: (key, value) => globalThis.localStorage.setItem(key, value),

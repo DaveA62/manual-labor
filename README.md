@@ -41,7 +41,7 @@ All stored presses operate simultaneously, including while shopping or operating
 
 Additional slots start at $50, then $90, $165, and so on. Configure machine prices, phase durations, upgrade prices, starting slots, and the slot price curve in `src/game/definitions.ts`.
 
-A single 50 ms simulation clock runs above the screens; machine UI never owns production timers. Background here means other screens in the running game. Hidden browser time is paused, and reloading never awards offline income. Stamping stays manual until that specific press buys Auto Stamper.
+A single 50 ms simulation clock runs above the screens; machine UI never owns production timers. Background here means other screens in the running game. Hidden-browser foreground ticks pause; authenticated cloud saves claim up to eight hours of offline production on return. Device-only offline earnings remain local and are not automatically imported. Stamping stays manual until that specific press buys Auto Stamper.
 
 ## Machine Refit
 
@@ -67,6 +67,10 @@ SVG remains the production renderer. In `npm run dev`, open `/manual-labor/?rend
 
 Phaser is not yet a compelling replacement for this single active vector machine. The experiment evaluates shared SVG-part textures, pointer interaction, camera effects, and scene cleanup without migrating gameplay. See [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) for the runtime interface, host adapters, evaluation, and future Capacitor/desktop direction. No native projects have been created.
 
+## Cloud accounts and offline production
+
+Copy `.env.example` to `.env.local` for development. Account supports automatic guests, Google linking/sign-in, email verification/password flows, cloud status, conflict choices, and device backups. The Shift Report acknowledges earnings already applied by the authenticated server. See [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) for SQL/Edge deployment, GitHub repository variables, Auth redirect settings, trust limitations, and live test steps.
+
 ## Deploy to GitHub Pages
 
 The workflow builds and tests pull requests, and deploys `main`. In **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source, then run the workflow or push to `main`. The expected project path is `https://DaveA62.github.io/manual-labor/`. Private repositories require a GitHub plan that supports Pages for private repositories; this setup does not change repository visibility. Pages serves the built game publicly unless your account provides private Pages access.
@@ -89,4 +93,4 @@ The workflow builds and tests pull requests, and deploys `main`. In **Settings �
 
 The visual system is documented in [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md). Shared palette/type tokens live in `src/tokens.css`; shared equipment controls and pagination live in `src/ui/`. Workshop, Storage, Catalog, and the Modifications overlay fit the dynamic viewport. Fonts are self-hosted with retained OFL licenses.
 
-Run `npm test` for pagination, isolation, simultaneous production, all automation combinations, purchase constraints, migration, reload continuity, and save graph validation. `npm run build` typechecks and builds the production application. No additional machine types, offline earnings, or skill systems are implemented.
+Run `npm test` for pagination, isolation, simultaneous production, all automation combinations, purchase constraints, migration, reload continuity, and save graph validation. `npm run build` typechecks and builds the production application. No additional machine types or skill systems are implemented. Supabase authentication, revision-checked cloud saves, and offline production are documented in [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).

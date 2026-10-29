@@ -374,3 +374,45 @@ h1,h2,h3{font-family:var(--heading);font-weight:700;line-height:1;text-transform
   .refit-requirements,.refit-confirmation{grid-column:1;grid-row:2}.refit-actions{grid-column:1;grid-row:3}
   .refit-max{grid-column:1;grid-row:2/4}
 }
+
+/* Account and shift panels share the equipment frame, never page scrolling. */
+.account-control{font-size:15px;padding:8px 12px;gap:7px;flex-shrink:0}
+.sync-dot{width:8px;height:8px;display:inline-block;background:var(--seam);border:1px solid var(--charcoal)}
+.sync-synced{background:var(--mint)}.sync-error,.sync-conflict{background:var(--red)}.sync-syncing,.sync-connecting{background:var(--orange)}
+.account-dialog{height:min(580px,calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px))}
+.account-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;min-height:42px;flex-shrink:0;border-bottom:1px solid var(--charcoal);font-size:12px}
+.sync-status{border:1px solid var(--charcoal);padding:4px 7px;font-size:11px;color:var(--charcoal)}
+.account-content{flex:1;min-height:0;overflow:hidden;padding:14px;display:flex;flex-direction:column;gap:12px}
+.account-login-details{display:flex;flex-direction:column;gap:7px;font-size:13px;overflow-wrap:anywhere}
+.account-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.account-actions>.control{flex:1;min-width:120px;font-size:16px}
+.account-form{display:grid;grid-template-columns:1fr;gap:10px;min-height:0}
+.account-form h3{font-size:25px}.account-form label{display:grid;gap:5px;font-size:12px}
+.account-form input{width:100%;min-width:0;height:44px;border:var(--line);border-radius:0;background:var(--panel);color:var(--charcoal);font:16px var(--body);padding:8px;user-select:text;-webkit-user-select:text;touch-action:auto}
+.account-notice,.account-sync p{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.account-message{font-size:12px;line-height:1.4;padding:10px 14px;border-top:1px solid var(--charcoal);background:var(--panel);flex-shrink:0;max-height:70px;overflow:auto;user-select:text}
+.shift-summary{display:grid;grid-template-columns:1fr 1fr;padding:14px;gap:14px;border-bottom:var(--line)}
+.shift-summary dt{font-family:var(--heading);font-size:12px;letter-spacing:1px}.shift-summary dd{font-size:23px;margin-top:5px;font-weight:600}
+.shift-summary>div:last-child{grid-column:1/-1}.shift-summary>div:last-child dd{font-size:34px}
+.shift-machines{padding:4px 14px;min-height:0}.shift-machines>div{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;min-height:42px;border-bottom:1px solid var(--seam)}
+.shift-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:12px 14px}.shift-actions>.control{min-width:110px}
+@media(max-width:600px){.account-control{padding:7px;min-width:44px}.account-control>span:last-child{display:none}.game-header{gap:7px}.account-content{padding:10px;gap:8px}.account-actions{gap:6px}.account-actions>.control{font-size:15px}.account-message{padding:8px 10px}}
+@media(max-height:500px){
+ .account-dialog{width:min(680px,calc(100% - 28px))}.account-content{padding:8px 12px;gap:6px}.account-summary{padding:6px 12px;min-height:34px}
+ .account-content:has(.account-login-details){display:grid;grid-template-columns:1fr 1.7fr;align-items:center;gap:12px}.account-actions{margin-top:6px;gap:6px}.account-actions>.control{font-size:14px;padding:6px;min-width:110px}
+ .account-form{grid-template-columns:1fr 1fr;gap:6px 12px;width:100%}.account-form h3,.account-form>.account-actions{grid-column:1/-1}.account-form h3{font-size:21px}.account-form label{gap:3px}.account-message{padding:6px 12px;max-height:48px}
+ .shift-dialog{width:min(680px,calc(100% - 28px))}.shift-summary{grid-template-columns:1fr 1fr 1fr;gap:10px;padding:10px 14px}.shift-summary>div:last-child{grid-column:auto}.shift-summary dd,.shift-summary>div:last-child dd{font-size:24px}.shift-actions{padding:8px 14px}
+}
+
+.game-content{position:relative}
+.session-blocker{position:absolute;inset:0;z-index:15;display:grid;place-content:center;gap:14px;text-align:center;background:#e8ddbfdd;padding:20px;font-size:14px}
+
+@media(max-height:330px){
+ .account-dialog:has(.account-form) .account-summary,.account-dialog:has(.account-form) .maintenance-tabs,.account-dialog:has(.account-form) .equipment-label,.account-form h3{display:none}
+ .account-dialog:has(.account-form) .dialog-heading{padding:4px 10px}
+ .account-dialog:has(.account-form) .account-content{padding:6px 10px}
+ .account-form .account-actions>.control{min-width:80px}
+ .account-dialog:has(.account-form) .account-message{max-height:32px;font-size:11px;padding:4px 10px}
+}
+@media(max-width:420px){.game-header .wordmark{font-size:18px}.game-header .header-cash strong{font-size:17px}}
+.shift-machines>div>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

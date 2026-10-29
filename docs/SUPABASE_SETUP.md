@@ -1,0 +1,112 @@
+# Supabase deployment and verification
+
+Project: `pjushzgqgdudxrufjjkx`. The browser uses `https://pjushzgqgdudxrufjjkx.supabase.co`, never `/rest/v1/` as its client URL.
+
+## Environment
+
+Copy `.env.example` to `.env.local` for development. Only these public build variables belong in Vite:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Their supplied project values are in `.env.example`. `.env.local` is ignored. Never place service-role keys, secret API keys, database passwords, or management tokens in `VITE_*`, client source, GitHub repository variables, screenshots, or logs. Missing variables leave the local game playable with cloud controls disabled.
+
+In GitHub → `DaveA62/manual-labor` → Settings → Secrets and variables → Actions → Variables, add those two repository variables using `.env.example`. Re-run the **Build and deploy to GitHub Pages** workflow. The workflow reads repository variables at build time, with the supplied public project values as defaults so the initial Pages deployment works immediately. Set the variables explicitly for configuration/rotation; changing them requires a new build. Keep Pages using GitHub Actions and the `/manual-labor/` Vite base.
+
+## Deploy database and function
+
+Use an authenticated Supabase CLI (the publishable key cannot deploy infrastructure). From the repository root:
+
+```sh
+npx supabase --help
+npx supabase login
+npx supabase link --help
+npx supabase link --project-ref pjushzgqgdudxrufjjkx
+npx supabase db push --help
+npx supabase db push
+npx supabase functions deploy --help
+npx supabase functions deploy game-sync --project-ref pjushzgqgdudxrufjjkx
+```
+
+The migration in `supabase/migrations/` creates four RLS-protected player tables, read policies, backend-only transactional RPCs, and recovery retention. Inspect existing remote migration history before pushing to an already modified project. Do not run the migration repeatedly in the SQL editor after it has been applied. To create later migrations, use `supabase migration new <name>`.
+
+`supabase/config.toml` sets `verify_jwt=false` for **this function** because publishable API keys are not JWTs. The handler still requires a real user bearer token and verifies it with `auth.getUser(token)` on every request. Never remove that check. The user ID comes exclusively from that verified response, never the body. Supabase supplies the runtime URL and API key dictionaries. The function prefers `SUPABASE_PUBLISHABLE_KEYS` / `SUPABASE_SECRET_KEYS`, supports local single-key values, and retains legacy anon/service-role fallbacks for compatibility. Privileged keys stay inside the Edge Function.
+
+Default browser origins are `https://davea62.github.io`, `http://localhost:5173`, `http://localhost:4173`, and the development preview `http://terminal.local:4173`. If another development origin is needed, set the function's `ALLOWED_ORIGINS` secret to a comma-separated list with no trailing slashes:
+
+```sh
+npx supabase secrets set --help
+npx supabase secrets set 'ALLOWED_ORIGINS=https://davea62.github.io,http://localhost:5173,http://localhost:4173,http://terminal.local:4173' --project-ref pjushzgqgdudxrufjjkx
+```
+
+CORS is not authorization. Non-browser callers must still authenticate. Remove temporary preview origins when no longer used. Deploy the function after rule changes alongside the frontend; bump `RULES_VERSION` when changing production/economy interpretation.
+
+## Authentication dashboard
+
+In Authentication configuration:
+
+1. Allow new signups and anonymous sign-ins.
+2. Enable Email and **Confirm Email**. Configure production SMTP so verification/recovery mail can reach players; the built-in trial sender is limited.
+3. Enable **manual identity linking**.
+4. Save both the Google OAuth web client ID and client secret in the Google provider. A live Task 07 linking probe reported **Unsupported provider: missing OAuth secret**; Google is enabled, but that provider credential must be completed before login works. Do not paste it into the app or any `VITE_*` variable. Google's authorized redirect URI is `https://pjushzgqgdudxrufjjkx.supabase.co/auth/v1/callback`.
+5. Set Site URL to `https://davea62.github.io/manual-labor/`.
+6. Allow application redirects for `https://davea62.github.io/manual-labor/**`, `http://localhost:5173/manual-labor/**`, and `http://localhost:4173/manual-labor/**`. Add the exact temporary preview origin/path only when testing it. The app returns to the existing root document using `?auth=google`, `?auth=verify`, or `?auth=recovery`; GitHub Pages needs no extra route.
+
+The app uses PKCE, persistent Supabase sessions, and automatic token refresh. Finish email/Google callbacks in the browser profile that initiated the flow so its PKCE verifier is available. Email guest linking first verifies the email with `updateUser({email})`, then offers password setup after returning; it never creates a replacement guest UUID. Google guest conversion calls `linkIdentity`, while signing into an existing account is a separate action. No automatic save merges occur. An identity collision leaves the current save intact and offers existing-account sign-in.
+
+Future Capacitor/Steam wrappers need their own approved redirect/deep-link adapter and protected session storage; don't hardcode web callbacks into native projects. No native wrapper is included here.
+
+## Save operations and recovery
+
+The `game-sync` function exposes authenticated `peek`, `commit`, and report `ack` operations. It replays validated game actions through the shared reducer, advances all machines with shared simulation using database timestamps, and commits with a revision compare-and-swap. There are no client SQL writes to cash or checkpoints. Requests have persistent UUID receipts so a lost HTTP response can be retried without applying the transaction twice.
+
+`ml_saves` stores the v3 snapshot, monotonically increasing revision, schema version, server production checkpoint, and created/updated timestamps. `ml_save_snapshots` retains the previous ten revisions. `ml_save_receipts` keeps the most recent 128 transaction receipts per player. Older retried requests still fail the revision check rather than granting income again. `ml_shift_reports` stores already-applied reports and acknowledgements independently of the financial revision.
+
+The original localStorage save key and v1/v2 migration remain supported. Local account caches include a base revision, checkpoint-relative action journal, pending request, and dismissed report IDs. Journals are scoped by account and browser-window identity. A second device/window loads the same cloud account; a stale active session receives a visible conflict. **Load cloud / earlier save** preserves the current device snapshot before loading the cloud copy. **Keep device copy** keeps an isolated local fork and stops uploading it. Neither choice overwrites cloud state with an arbitrary local balance. Use Download backup before clearing browser data.
+
+Five local recovery snapshots are kept under `manual-labor:recovery`, plus the previous local branch when choosing a cloud copy. Backups contain game data, not Supabase access/refresh tokens. Server snapshot recovery is an administrator operation: inspect the owner's historical revision, validate it with the v3 codec, and restore through an audited new revision. Never reset a live revision to an old number, edit checkpoint times to grant money, or expose an unrestricted restore-cash RPC.
+
+A signed-out guest has no recoverable login method. Link Google or verify email/set a password first to use the same progress on another device. Anonymous sign-out requires an explicit confirmation and keeps a device backup. Sign-out does not delete cloud rows.
+
+## Offline production
+
+The server consumes time since its saved production checkpoint, caps eligibility at eight hours, and uses 100% efficiency. Fully automated machines loop, partially automated machines stop at the next manual step, and unautomated presses wait. Refit machines use their remaining automation and own tier; other instances are independent. The production checkpoint always moves to the current server time, including when the cap truncates a longer absence, so discarded time cannot be reclaimed.
+
+Only foreground simulation runs locally for cloud accounts. Return/reconnect requests reconcile to the canonical server state. Device-only offline simulation is explicitly quarantined: it creates a local Shift Report and retains a pre-offline importable snapshot. It is never silently imported as authoritative cloud money. A legacy pre-Task-07 save has no offline grant and can be imported once into an empty account without changing its cash, machine IDs/order, upgrades, prestige, or progress.
+
+Shift Report totals have already been applied atomically before display. Collect/Escape only acknowledges the report. Rows are paginated, empty reports are omitted, and acknowledgements are retried without touching cash.
+
+## Security limits
+
+This is **not a cheat-proof economy**. The server refuses supplied payout totals, client elapsed time, arbitrary replacement snapshots after bootstrap, and direct wallet writes. It validates ownership and replays purchases, refits, manual actions, and automation through the existing rules. However, it cannot prove that a manual action came from a human gesture. A modified client can synthesize legal manual actions or choose their positions within the server-approved time budget. The one-time legacy import necessarily trusts historical device data; it is an explicit compatibility exception and must not be reused as a general save replacement API. Do not add leaderboards or financial rewards assuming those inputs are verified.
+
+New machine families must work in the pure shared simulation/reducer, define bounded automation, participate in validation, and have server/client parity tests. Never implement offline rewards from renderer completion callbacks or client clock differences. Do not authorize with user-editable `user_metadata`. Backend RPCs are SECURITY INVOKER, executable only by `service_role`, with no user wallet write grants. Keep RLS and owner SELECT predicates on every exposed table.
+
+## Verification
+
+```sh
+npm test
+npm run build
+npx deno check supabase/functions/game-sync/index.ts
+# With a local Supabase stack / Docker available:
+npx supabase test db
+```
+
+Automated tests cover legacy migration, all tiers and automation patterns, eight-hour caps, partial/manual machines, atomic conflicts, concurrent/retried claims, request tampering, same-ID guest linking, second-device loading, pending actions added during network requests, local-offline quarantine, and report acknowledgement. The migration has also been exercised in an embedded PostgreSQL runtime for RLS ownership, denied writes/RPCs, compare-and-swap, receipt replay, and snapshot retention.
+
+After deploying the real backend, verify with disposable test accounts:
+
+1. New browser profile: Guest account appears without interrupting gameplay; Account becomes Synced.
+2. Link Google, return, and verify the same machine IDs, bay order, and record. Repeat with email verification and password setup. An already-linked identity must not merge saves.
+3. Sign in on a second browser/device; load the cloud save. Make changes in both sessions and confirm the stale one shows Conflict. Keep or load explicitly.
+4. Save a fully automated press, close, and return. Verify per-machine Shift Report totals; reload and Collect must not add the payout again. Include a partial press and a newly refitted manual press.
+5. Verify email sign-in, verification, password recovery, and sign-out locally and on GitHub Pages using the redirect URLs above.
+6. Re-test portrait, short landscape, and desktop panels. Real touchscreen/fast-stamp and native deep-link testing require devices.
+
+Live anonymous authentication, second-client cloud loading, SQL ownership restrictions, concurrent conflicts, duplicate claims, and the eight-hour cap passed against the deployed backend. Google completion is blocked by the provider's missing OAuth client secret. Email verification, password recovery, and permanent-account cross-device sign-in still require a user-controlled mailbox and login; they have not been completed. Physical touchscreen and native deep-link checks also remain device tests.
+
+## Deployment record
+
+The `cloud_saves` migration and `game-sync` function were applied to the supplied project during Task 07. The local migration filename matches remote history. Later `supabase db push` runs should therefore see it as applied. Backend authentication, migration, owner isolation, denied writes/RPCs, second-client loads, and server cap/idempotency checks were exercised against the live service with disposable anonymous QA accounts. Google/email completion still requires a user-controlled test login and mailbox. The anonymous cloud and manual production loop were also verified in the browser; a manually produced bill persisted once with $5 lifetime earnings on that instance.
+
+The security advisor flags owner-scoped access by authenticated anonymous users; that access is intentional for guest saves and is not a public `anon` role grant. It also reports leaked-password protection disabled: enable it in Auth settings if available for the project ([guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)). The performance advisor reported no findings after the initial migration.

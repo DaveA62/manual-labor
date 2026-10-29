@@ -7,6 +7,8 @@ export interface SaveStorage {
 }
 export interface GamePlatform {
   storage: SaveStorage;
+  /** Reload-stable identity for this window’s isolated pending-action journal. */
+  sessionId?(): string;
   lifecycle: {
     isActive(): boolean;
     /** Monotonic milliseconds, never wall-clock time for production. */

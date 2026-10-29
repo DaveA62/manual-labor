@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccountPanel } from './components/AccountPanel';
+import { ShiftReport } from './components/ShiftReport';
 import { Icon } from './components/Icon';
 import { MachineScreen } from './components/MachineScreen';
 import { MachineShop } from './components/MachineShop';
@@ -11,7 +13,10 @@ import { money } from './ui/format';
 
 type Screen = 'storage' | 'workshop' | 'catalog';
 export default function App() {
-  const { state, dispatch, saved } = useGame();
+  const game = useGame();
+  const { state, dispatch, saved } = game;
+  const [accountOpen,setAccountOpen]=useState(false);
+  useEffect(()=>{if(game.recovery||game.authNotice)setAccountOpen(true);},[game.recovery,game.authNotice]);
   const [screen, setScreen] = useState<Screen>('workshop');
   const [selected, setSelected] = useState(state.machines[0].id);
   const machine = state.machines.find(item => item.id === selected) ?? state.machines[0];
@@ -43,6 +48,7 @@ export default function App() {
         <span className="equipment-label">CASH</span><strong>{money(state.cash)}</strong>
         {payday > 0 && <span className="payday" key={state.lifetime}>+{money(payday)}</span>}
       </div>
+      <Button className="account-control" onClick={()=>setAccountOpen(true)} aria-label={`Account: ${game.status}`}><span className={`sync-dot sync-${game.status.toLowerCase().replaceAll(' ','-')}`} aria-hidden="true"/><span>Account</span></Button>
       <Button className="square-control header-settings" aria-label="Settings" onClick={() => setDialog('settings')}><Icon name="settings" /></Button>
     </header>
     <nav className="primary-nav" aria-label="Primary navigation">
@@ -54,7 +60,10 @@ export default function App() {
       {screen === 'storage' && <Storage state={state} dispatch={dispatch} onOpen={openMachine} onShop={openCatalog} />}
       {screen === 'catalog' && <MachineShop state={state} dispatch={dispatch} />}
       {screen === 'workshop' && <MachineScreen key={machine.id} state={machine} cash={state.cash} number={state.machines.indexOf(machine) + 1} dispatch={dispatch} sound={sound} renderer={renderer} />}
+      {game.blocked&&<div className="session-blocker" role="status"><p>{game.status==='Connecting'?'Loading account save…':'Choose a save in Account.'}</p><Button onClick={()=>setAccountOpen(true)}>Account</Button></div>}
     </main>
+    <AccountPanel open={accountOpen} onClose={()=>setAccountOpen(false)} game={game} session={game.session}/>
+    <ShiftReport report={game.report} onCollect={game.session.acknowledge}/>
     <DialogPanel open={dialog === 'settings'} onClose={() => setDialog(null)} title="Workshop record" code="CONTROL PANEL / 01" className="settings-dialog">
       <dl className="record-grid"><div><dt>Lifetime earnings</dt><dd>{money(state.lifetime)}</dd></div><div><dt>Bills printed</dt><dd>{state.bills.toLocaleString()}</dd></div><div><dt>Storage</dt><dd>{state.machines.length} / {state.slots.length}</dd></div><div><dt>Save</dt><dd>{saved ? 'LOCAL / OK' : 'UNAVAILABLE'}</dd></div></dl>
       <div className="settings-actions"><Button aria-pressed={sound} onClick={() => { setSound(value => !value); if (!sound) feedback('click', true); }}><Icon name={sound ? 'sound' : 'muted'} size={20} />Sound {sound ? 'on' : 'off'}</Button><Button tone="danger" onClick={() => setDialog('reset')}><Icon name="reset" size={18} />Reset save</Button></div>
