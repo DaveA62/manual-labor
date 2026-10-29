@@ -1,7 +1,10 @@
+import { Burst } from "../presentation/Burst";
+import { FlowJet } from "../presentation/FlowJet";
+import { bottleHeight } from "./bottler/Parts";
 import { UI } from "../config/ui";
 import { SvgPlate } from "../ui/SvgPlate";
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import type { MachineRendererProps } from "../runtime/machine";
 import { automated, bottlePayout, bottleQuality, tier } from "../game/machines";
 import { BOTTLING } from "../game/definitions";
@@ -30,6 +33,8 @@ type Drag = {
   lastY: number;
   angle: number;
   phase: string;
+  gripX: number;
+  gripY: number;
 };
 export function Bottler({ state, runtime, hint }: MachineRendererProps) {
   const b = state.bottler!;
@@ -37,8 +42,19 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
     drag = useRef<Drag | null>(null);
   const [visual, setVisual] = useState<Drag | null>(null),
     [hit, setHit] = useState(88),
-    [impact, setImpact] = useState(0);
+    [impact, setImpact] = useState(0),
+    [loaded, setLoaded] = useState(0),
+    [collected, setCollected] = useState(0),
+    [spill, setSpill] = useState(0),
+    [returning, setReturning] = useState<Drag | null>(null),
+    [arrival, setArrival] = useState<{
+      size: typeof b.size;
+      fill: number;
+    } | null>(null);
   const previous = useRef(state.phase),
+    previousBills = useRef(state.bills),
+    priorBottle = useRef(b),
+    wasSpilling = useRef(false),
     lastSound = useRef(0);
   const phase = state.phase,
     auto = automated(state),
@@ -89,11 +105,39 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
       setImpact((v) => v + 1);
       runtime.feedback("seal");
     }
+    if (previous.current === "load" && phase === "fill") {
+      setLoaded((v) => v + 1);
+      runtime.feedback("glass");
+    }
+    if (previous.current === "fill" && phase === "transfer")
+      runtime.feedback("latch");
+    if (state.bills > previousBills.current) {
+      setCollected((v) => v + 1);
+      setArrival(priorBottle.current);
+      runtime.feedback("collect");
+    }
+    priorBottle.current = b;
+    previousBills.current = state.bills;
     previous.current = phase;
-  }, [phase, runtime]);
+  }, [phase, state.bills, runtime]);
   useEffect(() => {
     if (drag.current && !active(drag.current.part)) cancel();
   }, [phase, auto]);
+  useEffect(() => {
+    if (!returning) return;
+    const timer = setTimeout(() => setReturning(null), 220);
+    return () => clearTimeout(timer);
+  }, [returning]);
+  useEffect(() => {
+    if (!arrival) return;
+    const timer = setTimeout(() => setArrival(null), 450);
+    return () => clearTimeout(timer);
+  }, [arrival]);
+  useEffect(() => {
+    const spilling = phase === "fill" && b.fill > 1.05 && b.valve > 0;
+    if (spilling && !wasSpilling.current) setSpill((v) => v + 1);
+    wasSpilling.current = spilling;
+  }, [phase, b.fill, b.valve]);
   function point(event: PointerEvent<SVGSVGElement>) {
     const matrix = svg.current?.getScreenCTM();
     return matrix
@@ -114,6 +158,8 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = {
       part,
+      gripX: p.x - (part === "rack" ? 140 : CAP_X),
+      gripY: p.y - (part === "rack" ? 385 : BASE_Y),
       pointer: event.pointerId,
       x: p.x,
       y: p.y,
@@ -124,7 +170,13 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
     };
     setVisual({ ...drag.current });
     runtime.hint("");
-    runtime.feedback("glass");
+    runtime.feedback(
+      part === "rack" || part === "output"
+        ? "pickup"
+        : part === "valve"
+          ? "valve"
+          : "latch",
+    );
   }
   function move(event: PointerEvent<SVGSVGElement>) {
     const d = drag.current,
@@ -140,12 +192,17 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
       d.angle = angle;
       runtime.act({ type: "valve", amount: delta / BOTTLING.valveTravel });
       if (event.timeStamp - lastSound.current > 100 && Math.abs(delta) > 0.04) {
-        runtime.feedback("click");
+        runtime.feedback("valve");
         lastSound.current = event.timeStamp;
       }
     }
-    if (d.part === "carriage")
+    if (d.part === "carriage") {
       runtime.act({ type: "transfer", amount: dx / TRAVEL });
+      if (event.timeStamp - lastSound.current > 90 && Math.abs(dx) > 1) {
+        runtime.feedback("slide");
+        lastSound.current = event.timeStamp;
+      }
+    }
     if (d.part === "lever") runtime.act({ type: "cap", amount: dy / 80 });
     d.lastX = p.x;
     d.lastY = p.y;
@@ -160,14 +217,20 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
     if (d.part === "rack") {
       if (p.x >= 245 && p.x <= 347 && p.y >= 275 && p.y <= 424) {
         runtime.act({ type: "load" });
-        runtime.feedback("glass");
-      } else runtime.hint("Drop bottle in the filling bracket.");
+      } else {
+        runtime.feedback("reject");
+        setReturning(d);
+        runtime.hint("Drop bottle in the filling bracket.");
+      }
     }
     if (d.part === "output") {
       if (p.x >= 565 && p.x <= 710 && p.y >= 325 && p.y <= 470) {
         runtime.act({ type: "collect" });
-        runtime.feedback("glass");
-      } else runtime.hint("Swipe into the right crate.");
+      } else {
+        runtime.feedback("reject");
+        setReturning(d);
+        runtime.hint("Swipe into the right crate.");
+      }
     }
   }
   function key(event: KeyboardEvent, part: Part) {
@@ -195,6 +258,7 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
                 ? 0.1
                 : -0.1,
       });
+      runtime.feedback("valve");
       return;
     }
     if (["Enter", " "].includes(event.key)) {
@@ -212,7 +276,7 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
               ? { type: "cap", amount: 1 }
               : { type: "collect" },
       );
-      runtime.feedback("glass");
+      if (part === "carriage") runtime.feedback("slide");
     }
   }
   const controls = (part: Part, label: string) => ({
@@ -251,6 +315,9 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
   return (
     <div
       className="machine-scene bottler-scene"
+      data-phase={phase}
+      data-dragging={visual?.part}
+      data-quality={bottleQuality(b.fill).toLowerCase()}
       data-bottler-tier={state.tier}
       data-finish={tier(state).finish}
     >
@@ -266,11 +333,17 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
         onLostPointerCapture={(e) => finish(e, true)}
       >
         <g stroke="var(--charcoal)" strokeWidth="3" strokeLinejoin="round">
-          <BottlerFrame
-            tierName={tier(state).name}
-            variant={state.tier}
-            pressure={b.valve}
-          />
+          <g
+            key={`bottler-frame-${impact}`}
+            className={impact ? "bottler-frame-impact" : ""}
+            pointerEvents="none"
+          >
+            <BottlerFrame
+              tierName={tier(state).name}
+              variant={state.tier}
+              pressure={b.valve}
+            />
+          </g>
           <Capper layer="back" pull={pull} lever={pull} size={b.size} />
           <g data-part="rack" pointerEvents="none">
             <path
@@ -342,22 +415,38 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
             </SvgPlate>
           </g>
           {flowing && (
-            <g data-part="flow" pointerEvents="none">
-              <path
-                d={`M295 292V${BASE_Y - 50}`}
-                stroke="var(--liquid-edge)"
-                strokeWidth={b.valve > 0 ? 3 + b.valve * 3 : 2}
-                strokeDasharray={b.valve > 0 ? "8 3" : "2 12"}
-                className="liquid-stream"
-                opacity=".8"
-              />
-              {b.fill >= 1.05 && (
-                <g className="liquid-splash" fill="var(--liquid)" stroke="none">
-                  <path d="m264 340-8-11 3 14m68-3 9-12-3 17" />
-                  <circle cx="251" cy="367" r="3" />
-                  <circle cx="338" cy="382" r="3" />
-                </g>
+            <FlowJet
+              x={295}
+              start={292}
+              end={Math.max(
+                296,
+                BASE_Y - Math.min(b.fill, 1.18) * (bottleHeight(b.size) - 30),
               )}
+              aperture={b.valve}
+              dripping={b.valve === 0}
+            />
+          )}
+          {b.fill > 1.05 && phase === "fill" && (
+            <g
+              className="overflow-runoff"
+              pointerEvents="none"
+              stroke="var(--liquid)"
+              fill="var(--liquid)"
+            >
+              <path
+                d={`M270 ${BASE_Y - bottleHeight(b.size) + 18}q-8 38 -3 74m60-74q9 44 5 78`}
+                fill="none"
+                strokeWidth="2"
+                opacity=".6"
+              />
+              <ellipse
+                cx={FILL_X}
+                cy={409}
+                rx={Math.min(47, (b.fill - 1.05) * 200)}
+                ry="3"
+                stroke="none"
+                opacity=".35"
+              />
             </g>
           )}
           {phase !== "load" && visual?.part !== "output" && (
@@ -374,6 +463,7 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
                 y={BASE_Y}
                 size={b.size}
                 fill={b.fill}
+                flow={flowing ? b.valve || 0.08 : 0}
                 sealed={sealed}
               />
               {zone(x, BASE_Y - 50, hit, Math.max(hit, 115))}
@@ -388,10 +478,10 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
             />
           )}
           {visual?.part === "rack" && (
-            <g pointerEvents="none">
+            <g className="held-object" pointerEvents="none">
               <Bottle
-                x={visual.x}
-                y={visual.y + 45}
+                x={visual.x - visual.gripX}
+                y={visual.y - visual.gripY}
                 size={b.size}
                 marks={false}
               />
@@ -399,16 +489,25 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
           )}
           {visual?.part === "output" && (
             <g
+              className="held-object"
               pointerEvents="none"
               transform={`rotate(${Math.max(-12, Math.min(15, (visual.x - CAP_X) / 15))} ${visual.x} ${visual.y})`}
             >
               <Bottle
-                x={visual.x}
-                y={visual.y + 45}
+                x={visual.x - visual.gripX}
+                y={visual.y - visual.gripY}
                 size={b.size}
                 fill={b.fill}
                 sealed
               />
+            </g>
+          )}
+          {returning && (
+            <g pointerEvents="none" className="object-return" style={{
+              "--return-x": `${returning.x - returning.gripX - (returning.part === "rack" ? 140 : CAP_X)}px`,
+              "--return-y": `${returning.y - returning.gripY - (returning.part === "rack" ? 385 : BASE_Y)}px`,
+            } as CSSProperties}>
+              <Bottle x={returning.part === "rack" ? 140 : CAP_X} y={returning.part === "rack" ? 385 : BASE_Y} size={b.size} fill={returning.part === "rack" ? 0 : b.fill} sealed={returning.part === "output"} marks={false} />
             </g>
           )}
           <g
@@ -460,6 +559,62 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
           <SvgPlate x={245} y={446} width={220} height={17} fontSize={10}>
             BT–02 / GRAVITY ASSISTED
           </SvgPlate>
+          {visual?.part === "rack" && (
+            <rect
+              className={`drop-outline ${visual.x >= 245 && visual.x <= 347 && visual.y >= 275 && visual.y <= 424 ? "is-ready" : ""}`}
+              x="245"
+              y="280"
+              width="102"
+              height="126"
+              rx="3"
+              fill="none"
+              pointerEvents="none"
+            />
+          )}
+          {visual?.part === "output" && (
+            <path
+              className={`drop-outline ${visual.x >= 565 ? "is-ready" : ""}`}
+              d="M574 373h125v72H574z"
+              fill="none"
+              pointerEvents="none"
+            />
+          )}
+          <Burst
+            id={spill}
+            x={FILL_X}
+            y={BASE_Y - bottleHeight(b.size) + 22}
+            kind="water"
+          />
+          <Burst
+            id={loaded}
+            x={FILL_X}
+            y={BASE_Y + 3}
+            kind="metal"
+            strength={0.45}
+          />
+          <Burst
+            id={impact}
+            x={CAP_X}
+            y={BASE_Y - bottleHeight(b.size)}
+            kind="metal"
+            strength={0.65}
+          />
+          {collected > 0 && arrival && (
+            <g
+              key={`crate-${collected}`}
+              className="bottle-arrival"
+              pointerEvents="none"
+            >
+              <Bottle
+                x={628}
+                y={390}
+                size={arrival?.size ?? b.size}
+                fill={arrival?.fill ?? 1}
+                sealed
+                marks={false}
+              />
+            </g>
+          )}
           {active("rack") && (
             <path
               className="part-affordance"

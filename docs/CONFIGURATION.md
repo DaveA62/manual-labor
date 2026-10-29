@@ -59,3 +59,16 @@ Numeric balance changes normally need no SQL migration. Removing/renaming IDs, c
 | Camera / transition timing | `src/config/retirement.ts` | `CONTINUUM` | No game rules | Frontend only |
 
 See [RETIREMENT.md](RETIREMENT.md). Save schema is now 5/rules 3. Defaults from Task 09 remain unchanged for unretired accounts. Permanent points are not a device-importable resource. Changing rates on live careers requires an explicit checkpoint cutover, as with machine tuning.
+
+## Presentation response (no economy changes)
+
+| Change | Exact file | Property | Supabase? | Deployment / migration |
+| --- | --- | --- | --- | --- |
+| Liquid stiffness / damping / slosh bounds | `src/config/feedback.ts` | `FEEL.liquid.spring`, `.coupling`, `.damping`, `.maxWave`, `.maxTilt` | No | Frontend only; preserve zero-mean waves, clipping and sleep |
+| Flow ripple / fill smoothing | Same | `.liquid.flowForce`, `.flowImpulse`, `.fillResponse`, `.rest` | No | Frontend only; cosmetic, never fill quality or production timing |
+| Particle budget / expiry | Same | `.maxParticles`, `.burstMs` | No | Frontend only; keep expiry beyond CSS particle lifetime |
+| Audio default / voice limit / throttles | Same | `.audio.defaultVolume`, `.maxVoices`, `.hoverGapMs`, `.actionGapMs`, `.loopFadeMs` | No | Frontend only; device preference overrides default volume |
+| Material sound recipes | `src/platform/soundDesign.ts` | `soundLayers` | No | Frontend only; verify volume and material distinction by listening |
+| Press/drop/impact/UI cosmetic motion | `src/presentation/feel.css` | Named keyframes / reduced-motion rules | No | Frontend only; never move hitboxes away from controls |
+
+Player Sound and Effects Volume live in `manual-labor:feedback:v1`, separately from local/cloud progression. No gameplay/save version change or server deployment accompanies these settings.

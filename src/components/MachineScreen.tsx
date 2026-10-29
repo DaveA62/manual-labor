@@ -1,3 +1,4 @@
+import { useMachineAudio } from "../presentation/useMachineAudio";
 import type { ServiceProgress } from "../game/service/types";
 import { productionModifiers } from "../game/service/stats";
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
@@ -20,6 +21,7 @@ export function MachineScreen({ state, cash, number, dispatch, sound, renderer =
   const [modifications, setModifications] = useState(false);
   const previousPhase = useRef(state.phase);
   useEffect(() => { if (previousPhase.current !== state.phase) setHint(''); previousPhase.current = state.phase; }, [state.phase]);
+  useMachineAudio(state,sound);
   const runtime = useMachineRuntime(state, dispatch, sound, setHint);
   const modifiers=productionModifiers({service});
   const config = definition(state);

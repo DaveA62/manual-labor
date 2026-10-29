@@ -1,3 +1,4 @@
+import { LiquidVolume } from "../../presentation/LiquidVolume";
 import { BOTTLING } from "../../config/machines/bottler";
 import { SvgPlate, SvgIdentityPlate } from "../../ui/SvgPlate";
 import { useId } from "react";
@@ -13,6 +14,7 @@ export function Bottle({
   fill = 0,
   sealed = false,
   marks = true,
+  flow = 0,
 }: {
   x: number;
   y: number;
@@ -20,6 +22,7 @@ export function Bottle({
   fill?: number;
   sealed?: boolean;
   marks?: boolean;
+  flow?: number;
 }) {
   const clip = useId().replaceAll(":", "");
   const h = bottleHeight(size),
@@ -39,25 +42,20 @@ export function Bottle({
         strokeWidth="3"
       />
       <g clipPath={`url(#${clip})`}>
-        <rect
-          x="-28"
-          y={-level}
-          width="56"
-          height={level + 2}
-          fill="var(--liquid)"
-          opacity=".8"
-          stroke="none"
-          className="bottle-fluid"
-        />
-        <path
-          d={`M-28 ${-level}h56`}
-          stroke="var(--liquid-edge)"
-          strokeWidth="3"
-        />
+        {fill > 0 && (
+          <LiquidVolume
+            width={56}
+            depth={body}
+            fill={fill}
+            flow={flow}
+            pose={x}
+            sealed={sealed}
+          />
+        )}
         {fill > 0 && (
           <path
             d={`M12 ${-Math.min(level * 0.45, body - 8)}v-3m-17 ${-Math.min(level * 0.3, 24)}v-3`}
-            className="bottle-bubbles"
+            className={`bottle-bubbles ${flow > 0 ? "is-flowing" : ""}`}
             stroke="var(--panel)"
             strokeWidth="2"
           />
@@ -178,18 +176,14 @@ export function BottlerFrame({
         fillOpacity=".65"
         strokeWidth="4"
       />
-      <path
-        d="M240 158h109v62H240z"
-        fill="var(--liquid)"
-        opacity=".75"
-        stroke="none"
-      />
-      <path
-        d="M239 158q25-4 54 0t57 0"
-        fill="none"
-        stroke="var(--liquid-edge)"
-        strokeWidth="3"
-      />
+      <g transform="translate(294.5 220)">
+        <LiquidVolume
+          width={109}
+          depth={108}
+          fill={62 / 108}
+          flow={pressure * 0.5}
+        />
+      </g>
       {variant !== "water" && (
         <g
           className={`reservoir-bubbles ${pressure > 0 ? "is-flowing" : ""}`}

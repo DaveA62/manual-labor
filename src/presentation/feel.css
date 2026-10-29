@@ -1,0 +1,372 @@
+/* Material response belongs to presentation. All positions stay in machine coordinates. */
+.held-object {
+  filter: drop-shadow(3px 5px 0 #303b3b45);
+}
+.drop-outline {
+  stroke: var(--charcoal);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  opacity: 0.65;
+  transition:
+    stroke 0.1s,
+    opacity 0.1s;
+}
+.drop-outline.is-ready {
+  stroke: var(--orange);
+  stroke-width: 5;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+.machine-scene[data-dragging="crank"] [data-part="crank"],
+.machine-scene[data-dragging="valve"] [data-part="valve"] {
+  filter: drop-shadow(0 0 2px var(--panel));
+}
+.crank-work-ring {
+  opacity: 0.9;
+  stroke-linecap: round;
+}
+.head-impact [data-part="head"] {
+  animation: head-seat 180ms ease-out both;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+@keyframes head-seat {
+  0% {
+    filter: brightness(1.12);
+  }
+  35% {
+    filter: brightness(0.98);
+  }
+  100% {
+    filter: none;
+  }
+}
+.tray-catch {
+  animation: tray-catch 210ms ease-out;
+  transform-origin: 615px 430px;
+}
+@keyframes tray-catch {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(2px);
+  }
+  60% {
+    transform: translateY(-0.5px);
+  }
+}
+.object-return {
+  animation: object-return 200ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes object-return {
+  from {
+    transform: translate(var(--return-x), var(--return-y));
+    opacity: 0.8;
+  }
+  to {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+}
+.feel-burst > g {
+  animation: particle-hop 600ms cubic-bezier(0.1, 0.5, 0.6, 1) both;
+  animation-delay: var(--particle-delay);
+}
+.feel-burst > g > path {
+  animation: particle-fall 600ms ease-in both;
+  animation-delay: var(--particle-delay);
+}
+@keyframes particle-hop {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(var(--particle-x), var(--particle-y));
+    opacity: 0;
+  }
+}
+@keyframes particle-fall {
+  to {
+    transform: translateY(var(--particle-fall)) rotate(65deg);
+  }
+}
+.burst-water > g > path {
+  animation-name: water-fall;
+}
+@keyframes water-fall {
+  to {
+    transform: translateY(var(--particle-fall)) scale(0.65, 1.3);
+  }
+}
+.falling-drop {
+  animation: drop-fall 390ms linear infinite;
+  transform-box: view-box;
+}
+@keyframes drop-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(var(--drop-distance));
+    opacity: 0;
+  }
+}
+.flow-drips .falling-drop {
+  animation-duration: 240ms;
+}
+.flow-drips .falling-drop:nth-child(n + 2) {
+  display: none;
+}
+.bottle-bubbles.is-flowing {
+  animation: small-bubbles 550ms linear infinite;
+}
+@keyframes small-bubbles {
+  to {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+.bottler-frame-impact {
+  animation: bottler-seat 230ms ease-out;
+}
+@keyframes bottler-seat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateY(1.5px);
+  }
+  50% {
+    transform: translateY(-0.7px);
+  }
+}
+.bottle-arrival {
+  animation: crate-arrive 410ms cubic-bezier(0.15, 0.65, 0.3, 1) both;
+}
+@keyframes crate-arrive {
+  0% {
+    transform: translate(-70px, -13px) rotate(-3deg);
+    opacity: 1;
+  }
+  65% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 7px);
+    opacity: 0;
+  }
+}
+.bottler-scene[data-quality="precise"] .bottler-meter {
+  border-color: var(--steel-dark);
+  box-shadow: inset 3px 0 var(--mint);
+}
+.bottler-scene[data-dragging="carriage"] [data-action="carriage"],
+.bottler-scene[data-dragging="lever"] [data-part="capper"] {
+  filter: drop-shadow(0 1px 1px #303b3b66);
+}
+.bottle-arrival,
+.feel-burst,
+.drop-outline,
+.overflow-runoff {
+  pointer-events: none;
+}
+/* Controls retain hard seams and screen-sized targets, with immediate press/release response. */
+.control,
+.primary-nav button,
+.machine-open,
+.empty-bay,
+.continuum button {
+  transition:
+    background-color 100ms,
+    border-color 100ms,
+    box-shadow 100ms,
+    translate 100ms;
+}
+.control:active:not(:disabled),
+.primary-nav button:active,
+.machine-open:active,
+.empty-bay:active {
+  translate: 0 1px;
+  filter: brightness(0.96);
+}
+.modification-row.is-installed {
+  border-left: 4px solid var(--steel-dark);
+}
+.cycle-step.current .step-node {
+  animation: step-seat 190ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+@keyframes step-seat {
+  from {
+    transform: translateY(-3px);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.equipment-dialog[open] {
+  animation: equipment-open 130ms ease-out;
+}
+@keyframes equipment-open {
+  from {
+    opacity: 0.6;
+    translate: 0 7px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+.screen.catalog-screen,
+.screen.storage-screen {
+  animation: screen-engage 130ms ease-out;
+}
+@keyframes screen-engage {
+  from {
+    opacity: 0.75;
+    translate: 3px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+.interface-feedback {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  pointer-events: none;
+  overflow: hidden;
+}
+.interface-feedback i {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px;
+  border: 2px solid var(--orange);
+  border-radius: 50%;
+  animation: ui-tap 310ms ease-out both;
+}
+@keyframes ui-tap {
+  from {
+    scale: 0.4;
+    opacity: 0.8;
+  }
+  to {
+    scale: 1.8;
+    opacity: 0;
+  }
+}
+.header-cash:has(.payday) {
+  animation: register-tick 180ms ease-out;
+}
+@keyframes register-tick {
+  20% {
+    translate: 0 -2px;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+.sound-volume {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 0 18px 12px;
+  font: 12px var(--heading);
+  letter-spacing: 1px;
+  color: var(--charcoal);
+}
+.sound-volume input {
+  grid-column: 1/-1;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--orange);
+  cursor: pointer;
+  touch-action: pan-x;
+}
+.sound-volume output {
+  font-family: var(--body);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) {
+  .control:hover:not(:disabled) {
+    box-shadow: 0 3px 0 var(--charcoal);
+    translate: 0 -1px;
+  }
+  .machine-open:hover .machine-nameplate {
+    border-color: var(--steel-dark);
+    box-shadow: inset 3px 0 var(--orange);
+  }
+  .primary-nav button:hover:not([aria-current]) {
+    background: #46534b;
+  }
+  .bay-illustration .machine-thumbnail {
+    transition: scale 150ms ease-out;
+  }
+  .machine-open:hover .machine-thumbnail {
+    scale: 1.025;
+  }
+}
+@media (max-height: 540px) and (min-width: 651px) {
+  .settings-dialog .record-grid {
+    padding: 8px 12px;
+    gap: 7px;
+  }
+  .settings-dialog .settings-actions {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  .sound-volume {
+    padding: 0 12px 4px;
+    gap: 0;
+  }
+  .settings-dialog .record-grid dd {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feel-burst,
+  .bottle-arrival,
+  .object-return,
+  .interface-feedback {
+    display: none;
+  }
+  .falling-drop,
+  .bottle-bubbles,
+  .tray-catch,
+  .bottler-frame-impact,
+  .head-impact [data-part="head"],
+  .cycle-step.current .step-node {
+    animation: none;
+  }
+  .control,
+  .primary-nav button,
+  .machine-open,
+  .continuum button,
+  .drop-outline {
+    transition: none;
+  }
+  .held-object {
+    filter: none;
+  }
+}

@@ -13,7 +13,7 @@ import { clampPage, gridLayout, pageCount, pageForSlot } from '../ui/pagination'
 import { useElementSize } from '../ui/useElementSize';
 
 interface DragState { id: string; pointer: number; startX: number; startY: number; x: number; y: number; ready: boolean; active: boolean; target: number | null }
-export function Storage({ state, dispatch, onOpen, onShop, embedded = false, selectedId, onManage }: { embedded?: boolean; selectedId?: string; onManage?: () => void; state: WorkshopState; dispatch: Dispatch<WorkshopAction>; onOpen: (id: string) => void; onShop: () => void }) {
+export function Storage({ state, dispatch, onOpen, onShop, embedded = false, selectedId, onManage, sound=false }: { sound?:boolean; embedded?: boolean; selectedId?: string; onManage?: () => void; state: WorkshopState; dispatch: Dispatch<WorkshopAction>; onOpen: (id: string) => void; onShop: () => void }) {
   const root = useRef<HTMLElement>(null);
   const drag = useRef<DragState | null>(null);
   const hold = useRef<number | undefined>(undefined);
@@ -67,7 +67,7 @@ export function Storage({ state, dispatch, onOpen, onShop, embedded = false, sel
       if (drag.current !== value) return;
       value.ready = true; value.active = true; setVisual({ ...value });
       setAnnouncement('Machine picked up. Hold a page arrow to change pages.');
-      feedback('pickup', false);
+      feedback('pickup', sound);
     }, UI.gestures.storageHoldMs);
   }
   function slotAt(x: number, y: number) {
@@ -81,7 +81,7 @@ export function Storage({ state, dispatch, onOpen, onShop, embedded = false, sel
     const distance = Math.hypot(value.x - value.startX, value.y - value.startY);
     if (!value.ready) { if (distance > 12) clear(); return; }
     if (!value.active && distance < 5) return;
-    event.preventDefault(); value.active = true;
+    event.preventDefault(); if(!value.active)feedback('pickup',sound);value.active = true;
     value.target = slotAt(value.x, value.y);
     const control = document.elementFromPoint(value.x, value.y)?.closest<HTMLElement>('[data-storage-page]');
     const targetPage = control && root.current?.contains(control) ? Number(control.dataset.storagePage) : null;
@@ -106,7 +106,7 @@ export function Storage({ state, dispatch, onOpen, onShop, embedded = false, sel
     const target = slotAt(event.clientX, event.clientY);
     if (!canceled && value.active && target !== null) {
       dispatch({ type: 'move', machineId: value.id, to: target });
-      setAnnouncement(`Machine moved to bay ${target + 1}.`);
+      feedback('latch',sound);setAnnouncement(`Machine moved to bay ${target + 1}.`);
     } else if (value.active) setAnnouncement('Move canceled.');
     clear();
   }
@@ -146,7 +146,7 @@ export function Storage({ state, dispatch, onOpen, onShop, embedded = false, sel
         </div>;
       })}
     </div>
-    <footer className="screen-footer"><Button className="add-bay-control" disabled={state.cash < cost || !Number.isSafeInteger(cost)} onClick={() => dispatch({ type: 'buy-slot' })} aria-label={`Unlock storage slot for ${money(cost)}`}><Icon name="plus" size={16} /><span>Add bay</span><strong>{money(cost)}</strong></Button><Pager page={page} pages={pages} onChange={changePage} dragPages /></footer>
+    <footer className="screen-footer"><Button data-feedback="buy" className="add-bay-control" disabled={state.cash < cost || !Number.isSafeInteger(cost)} onClick={() => dispatch({ type: 'buy-slot' })} aria-label={`Unlock storage slot for ${money(cost)}`}><Icon name="plus" size={16} /><span>Add bay</span><strong>{money(cost)}</strong></Button><Pager page={page} pages={pages} onChange={changePage} dragPages /></footer>
     <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
     {dragged && visual?.active && <div className="drag-ghost" style={{ left: visual.x, top: visual.y }} aria-hidden="true"><MachineThumbnail type={dragged.machine.type} finish={tier(dragged.machine).finish} /><strong>{definition(dragged.machine).model} / {serial(dragged.number)}</strong></div>}
   </section>;

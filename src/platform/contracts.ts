@@ -8,7 +8,23 @@ export type FeedbackKind =
   | "glass"
   | "seal"
   | "continuum"
-  | "reveal";
+  | "reveal"
+  | "ui"
+  | "hover"
+  | "switch"
+  | "ratchet"
+  | "paper"
+  | "valve"
+  | "slide"
+  | "latch"
+  | "release"
+  | "collect"
+  | "reject";
+export interface MachineVoice {
+  kind: "press" | "bottler";
+  action: "lift" | "feed" | "flow" | "carriage" | "cap" | "collect";
+  intensity: number;
+}
 export interface SaveStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -25,5 +41,8 @@ export interface GamePlatform {
     subscribe(listener: (active: boolean) => void): () => void;
   };
   silence?(): void;
+  unlockAudio?(): void;
+  setAudioVolume?(volume: number): void;
+  machineAudio?(voice: MachineVoice | null, sound: boolean): void;
   feedback(kind: FeedbackKind, sound: boolean): void;
 }

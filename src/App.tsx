@@ -1,3 +1,6 @@
+import "./presentation/feel.css";
+import { useFeedbackPreferences } from "./presentation/useFeedbackPreferences";
+import { InterfaceFeedback } from "./presentation/InterfaceFeedback";
 import { RetirementExperience } from "./components/continuum/RetirementExperience";
 import { createWorkshop } from "./game/engine";
 import type { CSSProperties } from "react";
@@ -46,7 +49,7 @@ export default function App() {
       ? "phaser"
       : "svg",
   );
-  const [sound, setSound] = useState(false);
+  const { sound, setSound, volume, setVolume } = useFeedbackPreferences();
   const [payday, setPayday] = useState(0);
   const [dialog, setDialog] = useState<"settings" | "reset" | null>(null);
   const previousLifetime = useRef(state.lifetime);
@@ -166,6 +169,7 @@ export default function App() {
         )}
         {screen === "storage" && (
           <Storage
+            sound={sound}
             state={state}
             dispatch={dispatch}
             onOpen={openMachine}
@@ -206,6 +210,7 @@ export default function App() {
                   sound={sound}
                 />
                 <Storage
+                  sound={sound}
                   embedded
                   selectedId={machine.id}
                   state={state}
@@ -273,9 +278,10 @@ export default function App() {
         </dl>
         <div className="settings-actions">
           <Button
+            data-feedback="none"
             aria-pressed={sound}
             onClick={() => {
-              setSound((value) => !value);
+              setSound(!sound);
               if (!sound) feedback("click", true);
             }}
           >
@@ -287,6 +293,18 @@ export default function App() {
             {state.service ? "Reset workshop" : "Reset save"}
           </Button>
         </div>
+        <label className="sound-volume">
+          EFFECTS VOLUME <output>{Math.round(volume * 100)}%</output>
+          <input
+            aria-label="Effects volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+          />
+        </label>
         {import.meta.env.DEV && (
           <div className="settings-actions" aria-label="Development renderer">
             <Button
@@ -340,7 +358,7 @@ export default function App() {
       </DialogPanel>
     </div>
   );
-  return canonical.service?.session ? (
+  const screenView = canonical.service?.session ? (
     <RetirementExperience
       key={canonical.service.session.id}
       game={game}
@@ -350,5 +368,11 @@ export default function App() {
     />
   ) : (
     factory
+  );
+  return (
+    <>
+      <InterfaceFeedback sound={sound} />
+      {screenView}
+    </>
   );
 }

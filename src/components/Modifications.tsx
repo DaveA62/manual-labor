@@ -47,7 +47,7 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
             return <article className={`modification-row ${owned ? 'is-installed' : ''}`} key={upgrade.id}>
               <span className="modification-icon"><Icon name={upgrade.icon} size={25} /></span>
               <div><h3>{upgrade.name}</h3><p>{upgrade.description}</p></div>
-              <Button tone={owned ? 'plain' : 'primary'} disabled={owned || !affordable} aria-label={owned ? `${upgrade.name} installed` : `Buy ${upgrade.name} for ${money(cost)}`} onClick={() => { dispatch({ type: 'buy-upgrade', machineId: machine.id, upgradeId: upgrade.id }); feedback('buy', sound); }}>
+              <Button data-feedback="none" tone={owned ? 'plain' : 'primary'} disabled={owned || !affordable} aria-label={owned ? `${upgrade.name} installed` : `Buy ${upgrade.name} for ${money(cost)}`} onClick={() => { dispatch({ type: 'buy-upgrade', machineId: machine.id, upgradeId: upgrade.id }); feedback('buy', sound); }}>
                 {owned ? <><Icon name="check" size={18} /><span>Installed</span></> : <><strong>{money(cost)}</strong><span>{affordable ? 'Install' : 'Insufficient cash'}</span></>}
               </Button>
             </article>;
@@ -66,7 +66,7 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
         })}</ul><p>All upgrades and automation reset.</p></div>}
         <footer className="refit-actions"><div><span className="equipment-label">REFIT FEE</span><strong>{money(fee)}</strong></div>
           {confirming && <Button onClick={() => setConfirmation(null)}>Cancel</Button>}
-          <Button tone="primary" disabled={!eligible} aria-label={confirming ? `Confirm refit to ${next.name} for ${money(fee)}` : `Refit to ${next.name}`} onClick={event => {
+          <Button data-feedback="none" tone="primary" disabled={!eligible} aria-label={confirming ? `Confirm refit to ${next.name} for ${money(fee)}` : `Refit to ${next.name}`} onClick={event => {
             // A double click must not accept the confirmation it just opened.
             if (confirming && event.detail > 1) return;
             if (!confirming) { setConfirmation(machine.tier); return; }

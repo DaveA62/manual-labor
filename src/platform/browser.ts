@@ -1,5 +1,5 @@
 import type { GamePlatform } from "./contracts.ts";
-import { feedback, silence } from "./browserFeedback.ts";
+import { feedback, silence, unlockAudio, setAudioVolume, machineAudio } from "./browserFeedback.ts";
 /** Browser / future WebView host. No APIs are accessed until a service is called. */
 export const browserPlatform: GamePlatform = {
   sessionId() {
@@ -38,4 +38,7 @@ export const browserPlatform: GamePlatform = {
   },
   feedback,
   silence,
+  unlockAudio,
+  setAudioVolume,
+  machineAudio,
 };
