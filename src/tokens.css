@@ -21,3 +21,7 @@
   --target:44px;
   --gap:12px;
 }
+/* Family finishes: scope painted surfaces, never controls or charcoal structure. */
+[data-finish="mint"]{--machine-paint:var(--mint);--machine-highlight:var(--mint-light);--machine-shade:var(--steel-dark)}
+[data-finish="silver"]{--machine-paint:#abb5b7;--machine-highlight:#d4d9d5;--machine-shade:#627e8d}
+[data-finish="gold"]{--machine-paint:#b79950;--machine-highlight:#d9c78c;--machine-shade:#7f7045}

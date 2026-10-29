@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
-import { automated, direction, earnings } from '../game/machines';
+import { automated, direction, earnings, tier } from '../game/machines';
 import type { ManualAction, MachineInstance } from '../game/types';
 import { angleDelta, CRANK, inPlate, inTray, TAU, validStamp, recentDownSpeed, resistedHeadTravel, driveAngle } from '../game/gestures';
 import { Frame, Head, Crank, Gear, Paper, Automation } from './press/Parts';
@@ -113,13 +113,13 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
   });
   const owned = (id: MachineInstance['upgrades'][number]) => state.upgrades.includes(id);
   const bill = (x: number, y: number, printed = false) => <Paper x={x} y={y} printed={printed} value={earnings(state)} />;
-  return <div className="machine-scene rebuilt-press">
+  return <div className="machine-scene rebuilt-press" data-finish={tier(state).finish}>
     <svg ref={svg} viewBox="0 0 720 510" className="press-svg" aria-label="Interactive money press. Drag paper, rotate crank, pull head down quickly, collect bill. Tab and Enter also operate active parts."
       onPointerDown={down} onPointerMove={move} onPointerUp={event => finish(event)} onPointerCancel={event => finish(event, true)} onLostPointerCapture={event => finish(event, true)}>
       <g stroke="var(--charcoal)" strokeWidth="3" strokeLinejoin="round">
         <ellipse cx="357" cy="469" rx="321" ry="13" fill="var(--charcoal)" opacity=".12" stroke="none" />
         <g key={`frame-${impact}`} className={impact?'frame-impact':''}>
-          <Frame><Gear x={462} y={232} radius={26} angle={-wheelAngle*2} /><Gear x={505} y={272} radius={20} angle={wheelAngle*2.6} /></Frame>
+          <Frame tierName={tier(state).name}><Gear x={462} y={232} radius={26} angle={-wheelAngle*2} /><Gear x={505} y={272} radius={20} angle={wheelAngle*2.6} /></Frame>
           <Automation feeder={owned('feeder')} motor={owned('motor')} collector={owned('collector')} stamper={owned('stamper')} phase={state.phase} progress={state.progress} angle={wheelAngle} />
         </g>
         {state.phase !== 'feed' && state.phase !== 'collect' && <g transform="translate(291 383) scale(1 .2)">{bill(0,0,state.phase==='lift')}</g>}
@@ -145,7 +145,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
         <g className={active('bill')?'tray-ready':''}>
           <path d="m545 408 13-29h118l14 29v29H545z" fill="var(--frame)" />
           {state.bills>0 && bill(558,380,true)}
-          <path d="M545 409h145v28H545z" fill="var(--mint)" /><rect x="569" y="417" width="99" height="13" fill="var(--panel)" strokeWidth="1.5" /><text x="618" y="427" fontSize="10" textAnchor="middle" fontFamily="var(--heading)" stroke="none" fill="var(--charcoal)">COLLECTION / OUT</text>
+          <path d="M545 409h145v28H545z" fill="var(--machine-paint, var(--mint))" /><rect x="569" y="417" width="99" height="13" fill="var(--panel)" strokeWidth="1.5" /><text x="618" y="427" fontSize="10" textAnchor="middle" fontFamily="var(--heading)" stroke="none" fill="var(--charcoal)">COLLECTION / OUT</text>
         </g>
         {state.phase==='collect' && visual?.kind!=='bill' && <g {...controls('bill', 'Collect finished bill: drag it into the right tray, or press Enter')} transform={auto?`translate(${state.progress*267} ${state.progress*30})`:undefined}>
           <rect x={351-Math.max(116,hitSize)/2} y={375.5-Math.max(53,hitSize)/2} width={Math.max(116,hitSize)} height={Math.max(53,hitSize)} fill="transparent" stroke="none" />{bill(293,349,true)}

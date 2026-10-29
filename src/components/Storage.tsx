@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { slotPrice } from '../game/definitions';
-import { automated, definition, earningsPerMinute, machineStatus, phaseLabel } from '../game/machines';
+import { automated, definition, earningsPerMinute, machineStatus, phaseLabel, tier } from '../game/machines';
 import type { WorkshopAction, WorkshopState } from '../game/types';
 import { MachineThumbnail } from './MachineThumbnail';
 import { Icon } from './Icon';
@@ -117,7 +117,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
       {state.slots.slice(first, first + layout.size).map((id, offset) => {
         const index = first + offset;
         const entry = id ? machines.get(id) : undefined;
-        const name = entry ? `${definition(entry.machine).name} #${entry.number}` : '';
+        const name = entry ? `${tier(entry.machine).name} #${entry.number}` : '';
         const estimate = entry ? earningsPerMinute(entry.machine) : 0;
         return <div key={index} data-slot-index={index} className={`storage-bay ${visual?.target === index && visual.active ? 'drop-target' : ''}`}>
           {entry ? <article className={`machine-card ${visual?.id === id && visual.active ? 'being-moved' : ''}`}>
@@ -133,8 +133,8 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
               }
             }}><Icon name="grip" size={19} /></button></header>
             <button className="machine-open" onClick={() => onOpen(entry.machine.id)} aria-label={`Operate ${name}`}>
-              <div className="bay-illustration"><MachineThumbnail /></div>
-              <span className="machine-nameplate"><span className="equipment-label">{definition(entry.machine).model} / {serial(entry.number)}</span><strong>Money Press</strong></span>
+              <div className="bay-illustration"><MachineThumbnail finish={tier(entry.machine).finish} /></div>
+              <span className="machine-nameplate"><span className="equipment-label">{definition(entry.machine).model} / {serial(entry.number)}</span><strong>{tier(entry.machine).name}</strong></span>
               <StatusLamp running={automated(entry.machine)}>{machineStatus(entry.machine)}</StatusLamp>
               <span className="bay-phase">{phaseLabel[entry.machine.phase]} <span>{Math.round(entry.machine.progress * 100)}%</span></span>
               <span className="machine-progress"><span style={{ width: `${entry.machine.progress * 100}%` }} /></span>
@@ -146,6 +146,6 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
     </div>
     <footer className="screen-footer"><Button className="add-bay-control" disabled={state.cash < cost || !Number.isSafeInteger(cost)} onClick={() => dispatch({ type: 'buy-slot' })} aria-label={`Unlock storage slot for ${money(cost)}`}><Icon name="plus" size={16} /><span>Add bay</span><strong>{money(cost)}</strong></Button><Pager page={page} pages={pages} onChange={changePage} dragPages /></footer>
     <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
-    {dragged && visual?.active && <div className="drag-ghost" style={{ left: visual.x, top: visual.y }} aria-hidden="true"><MachineThumbnail /><strong>{definition(dragged.machine).model} / {serial(dragged.number)}</strong></div>}
+    {dragged && visual?.active && <div className="drag-ghost" style={{ left: visual.x, top: visual.y }} aria-hidden="true"><MachineThumbnail finish={tier(dragged.machine).finish} /><strong>{definition(dragged.machine).model} / {serial(dragged.number)}</strong></div>}
   </section>;
 }

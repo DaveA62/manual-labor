@@ -1,5 +1,5 @@
 import { ECONOMY, MACHINE_DEFINITIONS, slotPrice } from './definitions.ts';
-import { createMachine, definition } from './machines.ts';
+import { canRefit, createMachine, definition, nextTier, upgradePrice } from './machines.ts';
 import { advanceMachine, operate } from './simulation.ts';
 import type { MachineInstance, WorkshopAction, WorkshopState } from './types.ts';
 
@@ -26,8 +26,18 @@ export function reducer(state: WorkshopState, action: WorkshopAction): WorkshopS
       const machine = state.machines.find(item => item.id === action.machineId);
       if (!machine) return state;
       const upgrade = definition(machine).upgrades.find(item => item.id === action.upgradeId);
-      if (!upgrade || machine.upgrades.includes(upgrade.id) || state.cash < upgrade.cost) return state;
-      return { ...state, cash: state.cash - upgrade.cost, machines: state.machines.map(item => item.id === machine.id ? { ...item, upgrades: [...item.upgrades, upgrade.id] } : item) };
+      if (!upgrade || machine.upgrades.includes(upgrade.id)) return state;
+      const cost = upgradePrice(machine, upgrade.id);
+      if (state.cash < cost) return state;
+      return { ...state, cash: state.cash - cost, machines: state.machines.map(item => item.id === machine.id ? { ...item, upgrades: [...item.upgrades, upgrade.id] } : item) };
+    }
+    case 'refit': {
+      const machine = state.machines.find(item => item.id === action.machineId);
+      // A confirmation belongs to one tier. Replayed/stale requests cannot charge again.
+      if (!machine || machine.tier !== action.fromTier || !canRefit(machine, state.cash)) return state;
+      const next = nextTier(machine)!;
+      return { ...state, cash: state.cash - next.refit!.fee, machines: state.machines.map(item => item.id === machine.id
+        ? { ...item, tier: next.id, upgrades: [], phase: definition(item).phases[0], progress: 0 } : item) };
     }
     case 'buy-machine': {
       const config = Object.hasOwn(MACHINE_DEFINITIONS, action.machineType) ? MACHINE_DEFINITIONS[action.machineType] : undefined;

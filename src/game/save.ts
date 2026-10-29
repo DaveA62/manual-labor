@@ -9,17 +9,19 @@ const record = (value: unknown): value is Record<string, unknown> => typeof valu
 function upgrades(value: unknown, type: MachineType): UpgradeId[] | null {
   return Array.isArray(value) ? MACHINE_DEFINITIONS[type].upgrades.filter(upgrade => value.includes(upgrade.id)).map(upgrade => upgrade.id) : null;
 }
-function parseMachine(value: unknown): MachineInstance | null {
+function parseMachine(value: unknown, version: number): MachineInstance | null {
   if (!record(value) || typeof value.id !== 'string' || !value.id || value.id.length > 128 ||
     typeof value.type !== 'string' || !Object.hasOwn(MACHINE_DEFINITIONS, value.type)) return null;
   const type = value.type as MachineType;
+  const tier = value.tier === undefined && version === 2 ? MACHINE_DEFINITIONS[type].tiers[0].id : value.tier;
+  if (typeof tier !== 'string' || !MACHINE_DEFINITIONS[type].tiers.some(item => item.id === tier)) return null;
   const owned = upgrades(value.upgrades, type);
   if (!owned || !MACHINE_DEFINITIONS[type].phases.includes(value.phase as Phase) ||
     typeof value.progress !== 'number' || !Number.isFinite(value.progress) || value.progress < 0 || value.progress >= 1 ||
     !nonnegative(value.lifetime) || !nonnegative(value.bills)) return null;
-  return { id: value.id, type, phase: value.phase as Phase, progress: value.progress, lifetime: value.lifetime, bills: value.bills, upgrades: owned };
+  return { id: value.id, type, tier, phase: value.phase as Phase, progress: value.progress, lifetime: value.lifetime, bills: value.bills, upgrades: owned };
 }
-/** Accepts legacy v1 as well as v2. Invalid saves never inject unvalidated state. */
+/** Accepts legacy v1/v2 as well as v3. Invalid saves never inject unvalidated state. */
 export function decodeSave(raw: string | null): WorkshopState | null {
   if (!raw) return null;
   try {
@@ -31,8 +33,8 @@ export function decodeSave(raw: string | null): WorkshopState | null {
       const machine = { ...createMachine('press-legacy'), upgrades: owned, lifetime: data.lifetime, bills: data.bills };
       return { ...createWorkshop(), cash: data.cash, lifetime: data.lifetime, bills: data.bills, machines: [machine], slots: [machine.id, null] };
     }
-    if (data.version !== 2 || !Array.isArray(data.machines) || data.machines.length === 0 || !Array.isArray(data.slots) || data.slots.length < 2) return null;
-    const machines = data.machines.map(parseMachine);
+    if ((data.version !== 2 && data.version !== 3) || !Array.isArray(data.machines) || data.machines.length === 0 || !Array.isArray(data.slots) || data.slots.length < 2) return null;
+    const machines = data.machines.map(value => parseMachine(value, data.version as number));
     if (machines.some(machine => machine === null)) return null;
     const valid = machines as MachineInstance[];
     const ids = new Set(valid.map(machine => machine.id));
@@ -48,7 +50,7 @@ export function readSave(): WorkshopState {
   catch { return createWorkshop(); }
 }
 export function writeSave(state: WorkshopState): boolean {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 2, ...state })); return true; }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 3, ...state })); return true; }
   catch { return false; }
 }
 export function clearLegacySave() {

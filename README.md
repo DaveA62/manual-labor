@@ -29,7 +29,7 @@ Storage is the active workshop floor, presented as a viewport-sized, paginated b
 
 Catalog sells additional presses for $50. Each press has its own permanent ID, cycle progress, upgrades, earnings, and bill count. New machines use the first empty slot. Upgrades are bought separately for every instance:
 
-| Upgrade | Price | Effect |
+| Upgrade | Cash-tier price | Effect |
 | --- | --- | --- |
 | Auto Feeder | $15 | Loads paper |
 | Motorized Lift | $35 | Handles both crank steps |
@@ -43,9 +43,21 @@ Additional slots start at $50, then $90, $165, and so on. Configure machine pric
 
 A single 50 ms simulation clock runs above the screens; machine UI never owns production timers. Background here means other screens in the running game. Hidden browser time is paused, and reloading never awards offline income. Stamping stays manual until that specific press buys Auto Stamper.
 
+## Machine Refit
+
+Open Modifications → Machine Refit. Each press advances within the Money Press family:
+
+| Tier | Base bill value | Upgrade prices | Refit fee to enter |
+| --- | --- | --- | --- |
+| Cash Press | $5 | 1× | Supplied |
+| Silver Press | $20 | 3× | $750 |
+| Gold Press | $75 | 9× | $4,000 |
+
+Install Auto Feeder, Motorized Lift, Auto Collector, and Auto Stamper on that press before refitting. Improved Printing is optional and doubles its current tier’s bill value. Confirming a refit deducts the fee once, removes all upgrades and automation without refunds, and returns production to Load. ID, serial, bay, earnings, and bill count remain intact; other presses are unaffected. Gold is the maximum tier. Family tier definitions configure fees, requirements, output, prices, and finishes in `src/game/definitions.ts`.
+
 ## Saves
 
-Version 2 saves (`manual-labor:save:v2`) contain the shared wallet, lifetime totals, instances, normalized production progress, and ordered slots (null means empty; array length is unlocked capacity). Existing v1 saves migrate into one original press with all cash, earnings, bill counts, and purchased upgrades preserved, plus a free second slot. The v1 backup is retained until reset; future loads prefer the v2 save. Saves are validated, including IDs, slot references, machine types, phases, and aggregate statistics.
+Version 3 saves (retaining the `manual-labor:save:v2` storage key) contain the shared wallet, lifetime totals, instances with individual tiers, normalized production progress, and ordered slots (null means empty; array length is unlocked capacity). Existing v1 saves migrate into one original press with all cash, earnings, bill counts, and purchased upgrades preserved, plus a free second slot. The v1 backup is retained until reset; future loads prefer the current save. Existing v2 machines migrate to Cash Press with upgrades and cycle progress unchanged. Saves are validated, including IDs, slot references, machine types, family tier IDs, phases, and aggregate statistics.
 
 Economy and order changes save immediately. Production progress checkpoints once per second and flushes on page hide or navigation away. Simulation resumes from the saved phase after reload. Sound is optional. Reset confirms before replacing the entire workshop and clearing the legacy backup. If browser storage is unavailable, a warning appears and play continues for the session.
 
@@ -67,7 +79,7 @@ The workflow builds and tests pull requests, and deploys `main`. In **Settings �
 - `src/components/Storage.tsx`: sortable slot grid and production cards.
 - `src/components/MachineShop.tsx`: one catalog entry per page, machine acquisition, and capacity purchases.
 - `src/components/MachineScreen.tsx`: selected instance and its contained Modifications panel.
-- `src/components/Press.tsx`: the original SVG press and pointer input.
+- `src/components/Press.tsx`: layered SVG press and pointer input; shared artwork in `src/components/press/Parts.tsx`.
 
 The visual system is documented in [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md). Shared palette/type tokens live in `src/tokens.css`; shared equipment controls and pagination live in `src/ui/`. Workshop, Storage, Catalog, and the Modifications overlay fit the dynamic viewport. Fonts are self-hosted with retained OFL licenses.
 

@@ -20,6 +20,10 @@ Shared colors live in `src/tokens.css`. Use tokens in CSS and non-interactive SV
 
 Use flat fills, clear tonal separation, and bold charcoal boundaries. Two-pixel UI seams are standard; primary machine silhouettes can use heavier strokes. No glossy UI gradients, glass panels, bloom, large soft shadows, or arbitrary new accent colors. Safety stripes may be flat repeated shapes, never a background decoration covering whole screens.
 
+### Money Press tier finishes
+
+Painted surfaces use scoped `--machine-paint`, `--machine-highlight`, and `--machine-shade` tokens. Cash uses the existing mint palette. Silver uses worn steel `#ABB5B7`, pale metal `#D4D9D5`, and blue-gray `#627E8D`. Gold uses aged brass `#B79950`, worn edges `#D9C78C`, and dark brass `#7F7045`. These are material finishes, not new interface themes. Charcoal structures, orange controls, cream identification plates, paper, wear marks, and shared animations remain consistent. Tier finishes must appear on the full machine and Storage thumbnails; installed hardware follows its own instance’s finish.
+
 ## Typography
 
 - **Barlow Condensed 700:** headings, navigation, equipment labels, model numbers, and controls.
@@ -71,6 +75,8 @@ Show one selected equipment entry per catalog page: illustration, model, operati
 ### Modifications
 
 Open a native modal maintenance panel above the stationary Workshop. Native dialog behavior provides focus containment, Escape, and focus return. List only as many whole upgrade rows as fit; use the shared pager for the rest. Show the selected press's production record and shared available cash. Never let maintenance purchases affect another press.
+
+Machine Refit is a compact section within Modifications, selected beside Upgrades. Show current/next tier, base output, upgrade price multiplier, four required automation upgrades, and fee. Improved Printing is optional and resets too. Confirm the reset explicitly before dispatching a refit; Gold shows MAX TIER. Use a two-column arrangement on short landscape screens and paginate upgrade rows. Never stack new sections beneath the panel’s available viewport.
 
 Settings/records and reset confirmation also use contained panels. Scrolling is reserved for genuinely long secondary content such as future legal text, inside that content's own region, never the primary game frame.
 
