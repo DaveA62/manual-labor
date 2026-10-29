@@ -1,0 +1,8 @@
+/* Development-only machine renderer. Shares the baseline's contained machine area. */
+.phaser-press{position:relative;overflow:hidden}
+.phaser-host{position:absolute;inset:0;touch-action:none}
+.phaser-host canvas{display:block;touch-action:none}
+.renderer-loading{display:grid;place-content:center;font-family:var(--heading);font-size:18px}
+.phaser-press>.renderer-loading{position:absolute;inset:0;pointer-events:none}
+.phaser-key-control{position:absolute;right:12px;bottom:8px;min-width:44px;min-height:44px;border:var(--line);background:var(--panel);color:var(--charcoal);font-family:var(--heading);font-size:16px;padding:8px;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+.phaser-key-control:focus-visible{clip-path:none;width:auto;height:auto;overflow:visible}

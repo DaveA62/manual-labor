@@ -15,6 +15,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('workshop');
   const [selected, setSelected] = useState(state.machines[0].id);
   const machine = state.machines.find(item => item.id === selected) ?? state.machines[0];
+  const [renderer, setRenderer] = useState<'svg' | 'phaser'>(() => import.meta.env.DEV && new URLSearchParams(location.search).get('renderer') === 'phaser' ? 'phaser' : 'svg');
   const [sound, setSound] = useState(false);
   const [payday, setPayday] = useState(0);
   const [dialog, setDialog] = useState<'settings' | 'reset' | null>(null);
@@ -52,11 +53,12 @@ export default function App() {
       {!saved && <div className="save-warning" role="status">Saving unavailable. Session progress only.</div>}
       {screen === 'storage' && <Storage state={state} dispatch={dispatch} onOpen={openMachine} onShop={openCatalog} />}
       {screen === 'catalog' && <MachineShop state={state} dispatch={dispatch} />}
-      {screen === 'workshop' && <MachineScreen key={machine.id} state={machine} cash={state.cash} number={state.machines.indexOf(machine) + 1} dispatch={dispatch} sound={sound} />}
+      {screen === 'workshop' && <MachineScreen key={machine.id} state={machine} cash={state.cash} number={state.machines.indexOf(machine) + 1} dispatch={dispatch} sound={sound} renderer={renderer} />}
     </main>
     <DialogPanel open={dialog === 'settings'} onClose={() => setDialog(null)} title="Workshop record" code="CONTROL PANEL / 01" className="settings-dialog">
       <dl className="record-grid"><div><dt>Lifetime earnings</dt><dd>{money(state.lifetime)}</dd></div><div><dt>Bills printed</dt><dd>{state.bills.toLocaleString()}</dd></div><div><dt>Storage</dt><dd>{state.machines.length} / {state.slots.length}</dd></div><div><dt>Save</dt><dd>{saved ? 'LOCAL / OK' : 'UNAVAILABLE'}</dd></div></dl>
       <div className="settings-actions"><Button aria-pressed={sound} onClick={() => { setSound(value => !value); if (!sound) feedback('click', true); }}><Icon name={sound ? 'sound' : 'muted'} size={20} />Sound {sound ? 'on' : 'off'}</Button><Button tone="danger" onClick={() => setDialog('reset')}><Icon name="reset" size={18} />Reset save</Button></div>
+      {import.meta.env.DEV && <div className="settings-actions" aria-label="Development renderer"><Button aria-pressed={renderer === 'svg'} onClick={() => setRenderer('svg')}>SVG baseline</Button><Button aria-pressed={renderer === 'phaser'} onClick={() => setRenderer('phaser')}>Phaser experiment</Button></div>}
       <span className="inspection-stamp">INSPECTION STATUS: PENDING</span>
     </DialogPanel>
     <DialogPanel open={dialog === 'reset'} onClose={() => setDialog(null)} title="Reset workshop?" code="DELETE LOCAL SAVE" className="reset-dialog">

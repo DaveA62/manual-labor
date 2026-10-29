@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { automated, direction, earnings, tier } from '../game/machines';
-import type { ManualAction, MachineInstance } from '../game/types';
+import type { MachineInstance } from '../game/types';
+import type { MachineRendererProps } from '../runtime/machine';
 import { angleDelta, CRANK, inPlate, inTray, TAU, validStamp, recentDownSpeed, resistedHeadTravel, driveAngle } from '../game/gestures';
 import { Frame, Head, Crank, Gear, Paper, Automation } from './press/Parts';
+import { activePressPart, pressHeadTarget } from '../runtime/press';
 import { useMechanicalMotion } from './press/useMechanicalMotion';
-import { feedback } from '../game/feedback';
 
 type Drag = { kind: 'paper' | 'crank' | 'head' | 'bill'; pointer: number; x: number; y: number; startY: number; lastY: number; time: number; peak: number; angle: number };
-export function Press({ state, dispatch, sound, hint, onHint }: { state: MachineInstance; dispatch: Dispatch<ManualAction>; sound: boolean; hint: string; onHint: (text: string) => void }) {
+export function Press({ state, runtime, hint }: MachineRendererProps) {
+  const { act: dispatch, feedback, hint: onHint } = runtime;
   const svg = useRef<SVGSVGElement>(null);
   const drag = useRef<Drag | null>(null);
   const [visual, setVisual] = useState<Drag | null>(null);
@@ -32,19 +34,19 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
   }, []);
   const auto = automated(state);
   const isTurning = state.phase === 'raise' || state.phase === 'lift';
-  const headY = state.phase === 'stamp' ? 208 + (auto ? state.progress * 132 : 0) : state.phase === 'collect' ? 208 : isTurning ? 340 - state.progress * 132 : 340;
+  const headY = pressHeadTarget(state);
   const draggedHeadY = visual?.kind === 'head' ? Math.min(340, 208 + resistedHeadTravel(visual.y - visual.startY)) : headY;
   const directHead = visual?.kind === 'head' || (state.phase === 'lift' && state.progress === 0);
   const followedHead = useMechanicalMotion(draggedHeadY, directHead);
   const animatedHeadY = directHead ? draggedHeadY : followedHead;
   const wheelAngle = state.upgrades.includes('motor') ? driveAngle(state.phase, state.bills, state.progress) : rotation;
   useEffect(() => {
-    if (previous.current.phase === 'stamp' && state.phase === 'lift') { setImpact(v=>v+1); feedback('stamp', sound); }
+    if (previous.current.phase === 'stamp' && state.phase === 'lift') { setImpact(v=>v+1); feedback('stamp'); }
     if (state.bills > previous.current.bills) setCollected(v=>v+1);
     previous.current = { phase: state.phase, bills: state.bills };
-  }, [state.phase, state.bills, sound]);
+  }, [state.phase, state.bills, runtime]);
   useEffect(() => { if (!landing) return; const id=setTimeout(()=>setLanding(null),220); return()=>clearTimeout(id); }, [landing]);
-  const active = (kind: Drag['kind']) => !auto && (kind === 'paper' ? state.phase === 'feed' : kind === 'crank' ? isTurning : kind === 'head' ? state.phase === 'stamp' : state.phase === 'collect');
+  const active = (kind: Drag['kind']) => activePressPart(state) === kind;
   const point = (event: ReactPointerEvent<SVGSVGElement>) => {
     const matrix = svg.current?.getScreenCTM();
     return matrix ? new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse()) : null;
@@ -58,7 +60,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
     event.currentTarget.setPointerCapture(event.pointerId);
     const value: Drag = { kind, pointer: event.pointerId, x: p.x, y: p.y, startY: p.y, lastY: p.y, time: event.timeStamp, peak: 0, angle: Math.atan2(p.y - CRANK.y, p.x - CRANK.x) };
     drag.current = value; setVisual({ ...value }); onHint('');
-    feedback('click', sound);
+    feedback('click');
   }
   function move(event: ReactPointerEvent<SVGSVGElement>) {
     const d = drag.current;
@@ -70,7 +72,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
       const delta = angleDelta(d.angle, angle);
       d.angle = angle;
       setRotation(value => value + delta * 180 / Math.PI);
-      if (event.timeStamp-lastRatchet.current>65 && Math.abs(delta)>.035) { feedback('click', sound); lastRatchet.current=event.timeStamp; }
+      if (event.timeStamp-lastRatchet.current>65 && Math.abs(delta)>.035) { feedback('click'); lastRatchet.current=event.timeStamp; }
       if (active('crank')) dispatch({ type: 'turn', amount: delta * direction(state) / TAU });
     }
     if (d.kind === 'head') {
@@ -91,7 +93,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
     drag.current = null; setVisual(null);
     if (cancel) return;
     if (d.kind === 'paper' && active('paper')) {
-      if (inPlate(p.x, p.y)) { setLanding({x:p.x-58,y:p.y-26}); dispatch({ type: 'feed' }); feedback('click', sound); }
+      if (inPlate(p.x, p.y)) { setLanding({x:p.x-58,y:p.y-26}); dispatch({ type: 'feed' }); feedback('click'); }
       else onHint('Drop paper on the plate.');
     }
     if (d.kind === 'bill' && active('bill')) {

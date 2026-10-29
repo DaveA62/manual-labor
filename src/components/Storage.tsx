@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
+import { feedback } from '../game/feedback';
 import { slotPrice } from '../game/definitions';
 import { automated, definition, earningsPerMinute, machineStatus, phaseLabel, tier } from '../game/machines';
 import type { WorkshopAction, WorkshopState } from '../game/types';
@@ -65,7 +66,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
       if (drag.current !== value) return;
       value.ready = true; value.active = true; setVisual({ ...value });
       setAnnouncement('Machine picked up. Hold a page arrow to change pages.');
-      if (typeof navigator.vibrate === 'function') navigator.vibrate(12);
+      feedback('pickup', false);
     }, 430);
   }
   function slotAt(x: number, y: number) {

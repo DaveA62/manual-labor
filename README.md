@@ -61,6 +61,12 @@ Version 3 saves (retaining the `manual-labor:save:v2` storage key) contain the s
 
 Economy and order changes save immediately. Production progress checkpoints once per second and flushes on page hide or navigation away. Simulation resumes from the saved phase after reload. Sound is optional. Reset confirms before replacing the entire workshop and clearing the legacy backup. If browser storage is unavailable, a warning appears and play continues for the session.
 
+## Renderer experiment and platform direction
+
+SVG remains the production renderer. In `npm run dev`, open `/manual-labor/?renderer=phaser` or use Settings → Phaser experiment. Switch back with Settings → SVG baseline. Both operate the same instance through the existing reducer and normal local save; use a disposable browser profile for destructive testing. The production build excludes Phaser and its toggle.
+
+Phaser is not yet a compelling replacement for this single active vector machine. The experiment evaluates shared SVG-part textures, pointer interaction, camera effects, and scene cleanup without migrating gameplay. See [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) for the runtime interface, host adapters, evaluation, and future Capacitor/desktop direction. No native projects have been created.
+
 ## Deploy to GitHub Pages
 
 The workflow builds and tests pull requests, and deploys `main`. In **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source, then run the workflow or push to `main`. The expected project path is `https://DaveA62.github.io/manual-labor/`. Private repositories require a GitHub plan that supports Pages for private repositories; this setup does not change repository visibility. Pages serves the built game publicly unless your account provides private Pages access.

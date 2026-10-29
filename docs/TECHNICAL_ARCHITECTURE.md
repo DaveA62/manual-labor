@@ -1,0 +1,78 @@
+# Manual Labor — technical architecture
+
+The browser game remains React + TypeScript + Vite. SVG is the production machine renderer. Phaser 3.90.0 is a development-only evaluation, not an engine migration. No native projects or additional machine families are included.
+
+## Ownership and data flow
+
+| Layer | Files | Responsibility |
+| --- | --- | --- |
+| Family definitions | `src/game/definitions.ts` | Phases, automation, upgrades, shop prices, prestige tiers, fees, output, finishes |
+| Instance data | `src/game/types.ts`, `machines.ts` | Persistent ID, tier, upgrades, cycle progress, lifetime record; derived prices/status |
+| Simulation | `src/game/simulation.ts` | Pure per-instance phase transitions; only collect → feed pays |
+| Workshop reducer | `src/game/engine.ts` | All instances, wallet, purchases, slots, order, atomic prestige validation |
+| Save codec | `src/game/save.ts` | v1/v2 migration, v3 validation/serialization; injectable storage |
+| Session host | `src/game/useGame.ts`, `src/runtime/clock.ts` | One 50ms clock, immediate economy saves, 1s motion checkpoints, lifecycle flush |
+| React UI | `src/App.tsx`, `src/components/`, `src/ui/` | Navigation, HUD, Storage, Catalog, Modifications, accessible dialogs |
+| Renderer interface | `src/runtime/machine.ts`, `useMachineRuntime.ts` | Selected instance snapshots, scoped manual intent, feedback and hints |
+| Platform ports | `src/platform/` | Storage, activity/monotonic clock, optional sound/haptics |
+
+Input becomes a `ManualAction` through the runtime. Its bound machine ID becomes an `operate` action in the existing reducer. React then commits a fresh snapshot. Renderers read snapshots and animate them; they cannot buy upgrades, pay fees, advance time, or award earnings through the interface. Cash feedback remains owned by the shared App lifetime observer, so switching renderers cannot duplicate payouts or cash sounds.
+
+`useMachineRuntime` is a stable handle with refs updated after React commits. Imperative scenes read the latest committed instance instead of capturing initial props. SVG receives the same snapshot as a normal React prop. No renderer-specific data is saved.
+
+## Production and lifecycle
+
+The simulation and reducer use plain TypeScript values; they import no React, DOM, Phaser, storage, audio, or native SDKs. Many stored machines advance together even when their UI is unmounted. Partial automation stops at manual input. Reordering changes slots only. Prestige keeps the original instance ID, array position/serial, bay, and lifetime statistics.
+
+`createProductionClock` reads the platform's monotonic time and activity. It caps a running tick at 250ms and resets its time origin on every activity change. Suspended/hidden time earns nothing. A renderer RAF, Phaser update, tween, or texture callback never ticks production. React Strict Mode and renderer teardown must leave one session clock and no orphan scene listeners.
+
+`useGame` writes economy/order changes immediately and checkpoints motion once a second. Lifecycle events flush dirty state. Browser visibility, pagehide, and pageshow map to the lifecycle port. Saves retain the existing `manual-labor:save:v2` key and v3 payload. This task changes no save schema, migration, tier balance, automation durations, or purchasing rules.
+
+## Platform adapters
+
+`GamePlatform` exposes only services already needed:
+
+- `storage`: synchronous get/set/remove of serialized values; errors preserve the existing session-only warning behavior.
+- `lifecycle`: activity, monotonic milliseconds, and a subscription that returns cleanup.
+- `feedback`: optional procedural sound and haptics; failure must never affect production.
+
+The default adapter calls localStorage, Page Visibility/page lifecycle events, performance.now, Web Audio, and optional vibration. Browser globals are accessed when services run, not when importing pure logic. `configurePlatform` selects an adapter before React mounts; never swap hosts mid-session. Save functions also accept storage directly for tests or tooling.
+
+For future Capacitor or desktop packaging, retain the React shell and game core. Add an adapter at the composition root for application pause/resume, storage, and device feedback. Native asynchronous storage must hydrate before mounting the session and provide an ordered, durable write queue with explicit failure reporting; do not wrap an unawaited native write in this synchronous port and claim it saved. Extend the persistence lifecycle when that host is implemented. Native haptic/audio permission handling belongs in the adapter. No speculative native SDK dependencies or projects are added now.
+
+Pointer Events in SVG and Phaser's mouse/touch events are renderer adapters. They convert screen positions to the shared 720×510 machine coordinates. `src/game/gestures.ts` contains angle wrapping, direction-independent drop areas, recent stamp velocity, and bounded head resistance. `src/runtime/press.ts` provides the common active part and head target. The browser/WebView renderer may use DOM coordinates; the production simulation may not.
+
+## Renderer contract
+
+`MachineRuntime` has four operations: `read()`, `act(ManualAction)`, `feedback(kind)`, and `hint(text)`. Treat returned snapshots as immutable. The runtime is bound to a single machine; changing the selected machine creates another handle. Changing renderer, opening a menu, or reloading art must not reset a cycle or infer earnings from animation completion.
+
+The baseline `Press.tsx` preserves pointer capture, cancellation, keyboard controls, and SVG screen conversion. Its layered artwork remains in `components/press/Parts.tsx`. Damped visual following is independent of production. Both renderers share the same coordinate system, direction, drop zones, stamp thresholds, tier finishes, and upgrade sources. Refit remounts presentation for that instance while the existing reducer handles the actual reset.
+
+All machine renderers fit the existing contained Workshop area. The React shell still owns dynamic viewport sizing, safe areas, navigation and paginated screens. Preserve 44px targets in screen pixels after scaling, cancel transient gestures during resizing, and honor reduced motion. Modals must block the underlying machine. Phaser discards input whose original target is not its own canvas, including global window input over React dialogs.
+
+## Phaser experiment
+
+Run `npm ci` and `npm run dev`, then open `/manual-labor/?renderer=phaser`. In development, Settings also offers **SVG baseline** and **Phaser experiment**. The selection is session-only; switching preserves game state. The experiment uses the normal local save and wallet, so use a disposable browser profile when testing refits or resets. Production URLs ignore the query and show SVG; the toggle is compiled out.
+
+`src/experiments/phaser/` contains the entire Phaser scene, texture bridge, React mounting adapter, and its CSS. Phaser is pinned as a devDependency. A `import.meta.env.DEV` guard around the dynamic import removes the dependency graph from production output. The TypeScript build still checks the experimental source. Do not add an eager Phaser import to the application, shared runtime, or game modules.
+
+The texture bridge rasterizes the established SVG assemblies once per appearance change. It embeds the existing heading font and resolves shared finish tokens. Frame, head, crank, gears, feed assembly, lift motor, conveyor, stamp actuator, precision print insert, paper, and bills remain independent scene objects. The 720×510 logical view uses a 2× backing canvas and camera zoom with FIT scaling. Input uses the camera's world transform, not guessed CSS offsets. A ResizeObserver refreshes scaling and cancels a transient drag; it does not change production.
+
+The scene uses manual pointer intent, recent downward velocity, resistance, damped head travel, linked gears, finite impact particles, restrained camera shake, and existing optional feedback. No Arcade/Matter physics, Phaser production timer, separate state machine, or Phaser audio manager is enabled. A focusable React keyboard alternative operates the current part. Pointer cancellation, outside release, blur, lifecycle suspension, unmount, and appearance changes discard transient drags. Async texture preparation is guarded against unmount; cleanup destroys the Game with `noReturn=false` so it can be mounted again. Import/render and texture initialization failures fall back to SVG.
+
+To remove the experiment: remove its DEV import/branch from MachineScreen, the development Settings toggle/query from App, `src/experiments/phaser/`, and the Phaser devDependency. Keep the runtime and platform ports. No save migration is required.
+
+## Evaluation
+
+**Keep SVG as the production renderer.** Phaser successfully drives the same press through the existing reducer and gives a unified canvas scene graph, transforms, camera effects, and tweens. Those are useful candidates for future machines with many moving objects. They have not demonstrated a meaningful benefit for today's single active press: Storage already uses cheap thumbnails and the simulation is independent of rendering.
+
+Phaser also introduces raster texture preparation, another lifecycle, explicit accessibility controls, and extra dev download/startup cost. SVG retains native vector sharpness, DOM hit areas, and simpler iteration on the current artwork. Canvas performance or mobile battery improvements are not established by this experiment. The pinned Phaser minified distribution is about 1.20 MB (315 KB gzip); this is a distribution-size measurement, not the experiment’s Vite transfer size. The Task 06 production JS is about 275 KB (86 KB gzip), with no Phaser engine or experimental CSS included. Remote-browser frame rates are not a representative device benchmark; measure on actual iOS/Android hardware before proposing a replacement.
+
+Task 06 validation includes existing game tests plus runtime scoping, injected storage, and suspend/resume checks. Browser QA exercises mouse feed/crank/collection, slow stamp rejection, keyboard stamping, renderer switching with partial progress, upgrade assemblies, tiers, reloads, and viewport containment. Physical touchscreen and fast manual stamping require device playtesting. Packaging, app-store behavior, and native lifecycle integration remain future work.
+
+Official API references for the pinned implementation:
+
+- [Phaser 3.90 FIT scaling](https://docs.phaser.io/api-documentation/3.90.0/constant/scale)
+- [Phaser input](https://docs.phaser.io/phaser/concepts/input)
+- [Phaser TextureManager](https://docs.phaser.io/api-documentation/3.88.2/class/textures-texturemanager)
+- [Game teardown](https://docs.phaser.io/api-documentation/class/game)

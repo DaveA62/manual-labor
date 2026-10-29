@@ -1,3 +1,5 @@
+import { getPlatform } from '../platform/index.ts';
+import type { SaveStorage } from '../platform/contracts.ts';
 import { MACHINE_DEFINITIONS } from './definitions.ts';
 import { createWorkshop } from './engine.ts';
 import { createMachine } from './machines.ts';
@@ -45,14 +47,14 @@ export function decodeSave(raw: string | null): WorkshopState | null {
     return { cash: data.cash, lifetime: data.lifetime, bills: data.bills, machines: valid, slots: data.slots as (string | null)[] };
   } catch { return null; }
 }
-export function readSave(): WorkshopState {
-  try { return decodeSave(localStorage.getItem(SAVE_KEY)) ?? decodeSave(localStorage.getItem(LEGACY_SAVE_KEY)) ?? createWorkshop(); }
+export function readSave(storage: SaveStorage = getPlatform().storage): WorkshopState {
+  try { return decodeSave(storage.getItem(SAVE_KEY)) ?? decodeSave(storage.getItem(LEGACY_SAVE_KEY)) ?? createWorkshop(); }
   catch { return createWorkshop(); }
 }
-export function writeSave(state: WorkshopState): boolean {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 3, ...state })); return true; }
+export function writeSave(state: WorkshopState, storage: SaveStorage = getPlatform().storage): boolean {
+  try { storage.setItem(SAVE_KEY, JSON.stringify({ version: 3, ...state })); return true; }
   catch { return false; }
 }
-export function clearLegacySave() {
-  try { localStorage.removeItem(LEGACY_SAVE_KEY); } catch { /* Main save status reports unavailable storage. */ }
+export function clearLegacySave(storage: SaveStorage = getPlatform().storage) {
+  try { storage.removeItem(LEGACY_SAVE_KEY); } catch { /* Main save status reports unavailable storage. */ }
 }
