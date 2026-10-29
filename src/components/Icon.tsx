@@ -4,6 +4,7 @@ export function Icon({ name, size = 22 }: { name: string; size?: number }) {
     motor: <><path d="M5 8h12v10H5zm12 3h3v4h-3M8 5v3m6-3v3M2 11h3m-3 4h3M8 21v-3m6 3v-3" /><path d="m12 10-3 4h4l-2 3" /></>,
     collect: <><path d="M3 12v8h18v-8M7 8l5 5 5-5M12 3v10M3 16h18" /></>,
     print: <><path d="M4 6h16v13H4zM7 9h10v7H7zM10 12h4M12 10v4" /></>,
+    stamp: <><path d="M6 4h12v6H6zM9 10v5m6-5v5M5 16h14v4H5z" /></>,
     sound: <><path d="m4 10 4 0 5-4v12l-5-4H4zM17 8c3 2 3 6 0 8m2-11c5 4 5 10 0 14" /></>,
     muted: <><path d="m4 10 4 0 5-4v12l-5-4H4zM17 9l5 6m0-6-5 6" /></>,
     reset: <><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></>,

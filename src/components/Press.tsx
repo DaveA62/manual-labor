@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
-import { automated, direction, earnings } from '../game/engine';
-import type { Action, GameState } from '../game/engine';
+import { automated, direction, earnings } from '../game/machines';
+import type { ManualAction, MachineInstance } from '../game/types';
 import { angleDelta, CRANK, inPlate, inTray, TAU, validStamp } from '../game/gestures';
 import { feedback } from '../game/feedback';
 
 type Drag = { kind: 'paper' | 'crank' | 'head' | 'bill'; pointer: number; x: number; y: number; startY: number; lastY: number; time: number; peak: number; angle: number };
-export function Press({ state, dispatch, sound, hint, onHint }: { state: GameState; dispatch: Dispatch<Action>; sound: boolean; hint: string; onHint: (text: string) => void }) {
+export function Press({ state, dispatch, sound, hint, onHint }: { state: MachineInstance; dispatch: Dispatch<ManualAction>; sound: boolean; hint: string; onHint: (text: string) => void }) {
   const svg = useRef<SVGSVGElement>(null);
   const drag = useRef<Drag | null>(null);
   const [visual, setVisual] = useState<Drag | null>(null);
@@ -14,7 +14,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: GameSta
   const [impact, setImpact] = useState(0);
   const auto = automated(state);
   const isTurning = state.phase === 'raise' || state.phase === 'lift';
-  const headY = state.phase === 'stamp' || state.phase === 'collect' ? 208 : isTurning ? 340 - state.progress * 132 : 340;
+  const headY = state.phase === 'stamp' ? 208 + (auto ? state.progress * 132 : 0) : state.phase === 'collect' ? 208 : isTurning ? 340 - state.progress * 132 : 340;
   const draggedHeadY = visual?.kind === 'head' ? Math.min(340, 208 + Math.max(0, visual.y - visual.startY)) : headY;
   const active = (kind: Drag['kind']) => !auto && (kind === 'paper' ? state.phase === 'feed' : kind === 'crank' ? isTurning : kind === 'head' ? state.phase === 'stamp' : state.phase === 'collect');
   const point = (event: ReactPointerEvent<SVGSVGElement>) => {

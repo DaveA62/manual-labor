@@ -1,43 +1,53 @@
-export type Phase = 'feed' | 'raise' | 'stamp' | 'lift' | 'collect';
-export type UpgradeId = 'feeder' | 'motor' | 'collector' | 'printing';
-export type Progress = { cash: number; lifetime: number; bills: number; upgrades: UpgradeId[] };
-export type GameState = Progress & { phase: Phase; progress: number; cycles: number };
-export const UPGRADES: { id: UpgradeId; name: string; cost: number; description: string; icon: string }[] = [
-  { id: 'feeder', name: 'Auto Feeder', cost: 15, description: 'Fresh paper. Right where you need it.', icon: 'feed' },
-  { id: 'motor', name: 'Motorized Lift', cost: 35, description: 'Let a motor do the heavy lifting.', icon: 'motor' },
-  { id: 'collector', name: 'Auto Collector', cost: 75, description: 'Every bill, straight to your pocket.', icon: 'collect' },
-  { id: 'printing', name: 'Improved Printing', cost: 150, description: 'Better ink. Double the payday.', icon: 'print' },
-];
-export const freshProgress = (): Progress => ({ cash: 0, lifetime: 0, bills: 0, upgrades: [] });
-export const createGame = (save = freshProgress()): GameState => ({ ...save, phase: 'feed', progress: 0, cycles: save.bills });
-export const earnings = (state: Progress) => state.upgrades.includes('printing') ? 10 : 5;
-export const direction = (state: GameState) => state.cycles % 2 === 0 ? 1 : -1;
-export const automated = (state: GameState) =>
-  (state.phase === 'feed' && state.upgrades.includes('feeder')) ||
-  ((state.phase === 'raise' || state.phase === 'lift') && state.upgrades.includes('motor')) ||
-  (state.phase === 'collect' && state.upgrades.includes('collector'));
-export type Action =
-  | { type: 'feed' } | { type: 'turn'; amount: number } | { type: 'stamp' }
-  | { type: 'collect' } | { type: 'buy'; id: UpgradeId } | { type: 'reset' };
-export function reducer(state: GameState, action: Action): GameState {
+import { ECONOMY, MACHINE_DEFINITIONS, slotPrice } from './definitions.ts';
+import { createMachine, definition } from './machines.ts';
+import { advanceMachine, operate } from './simulation.ts';
+import type { MachineInstance, WorkshopAction, WorkshopState } from './types.ts';
+
+export function createWorkshop(): WorkshopState {
+  const machine = createMachine('press-initial');
+  return { cash: 0, lifetime: 0, bills: 0, machines: [machine], slots: [machine.id, ...Array<null>(ECONOMY.startingSlots - 1).fill(null)] };
+}
+function withMachines(state: WorkshopState, machines: MachineInstance[]): WorkshopState {
+  if (machines.every((machine, index) => machine === state.machines[index])) return state;
+  let earned = 0;
+  let bills = 0;
+  machines.forEach((machine, index) => {
+    earned += machine.lifetime - state.machines[index].lifetime;
+    bills += machine.bills - state.machines[index].bills;
+  });
+  return { ...state, machines, cash: state.cash + earned, lifetime: state.lifetime + earned, bills: state.bills + bills };
+}
+export function reducer(state: WorkshopState, action: WorkshopAction): WorkshopState {
   switch (action.type) {
-    case 'reset': return createGame();
-    case 'feed': return state.phase === 'feed' ? { ...state, phase: 'raise', progress: 0 } : state;
-    case 'turn': {
-      if ((state.phase !== 'raise' && state.phase !== 'lift') || !Number.isFinite(action.amount)) return state;
-      const progress = Math.min(1, Math.max(0, state.progress + action.amount));
-      return progress >= 1 ? { ...state, phase: state.phase === 'raise' ? 'stamp' : 'collect', progress: 0 } : { ...state, progress };
+    case 'reset': return createWorkshop();
+    case 'tick': return withMachines(state, state.machines.map(machine => advanceMachine(machine, action.elapsedMs)));
+    case 'operate': return withMachines(state, state.machines.map(machine => machine.id === action.machineId ? operate(machine, action.action) : machine));
+    case 'buy-upgrade': {
+      const machine = state.machines.find(item => item.id === action.machineId);
+      if (!machine) return state;
+      const upgrade = definition(machine).upgrades.find(item => item.id === action.upgradeId);
+      if (!upgrade || machine.upgrades.includes(upgrade.id) || state.cash < upgrade.cost) return state;
+      return { ...state, cash: state.cash - upgrade.cost, machines: state.machines.map(item => item.id === machine.id ? { ...item, upgrades: [...item.upgrades, upgrade.id] } : item) };
     }
-    case 'stamp': return state.phase === 'stamp' ? { ...state, phase: 'lift', progress: 0 } : state;
-    case 'collect': {
-      if (state.phase !== 'collect') return state;
-      const value = earnings(state);
-      return { ...state, phase: 'feed', progress: 0, cash: state.cash + value, lifetime: state.lifetime + value, bills: state.bills + 1, cycles: state.cycles + 1 };
+    case 'buy-machine': {
+      const config = Object.hasOwn(MACHINE_DEFINITIONS, action.machineType) ? MACHINE_DEFINITIONS[action.machineType] : undefined;
+      const slot = state.slots.indexOf(null);
+      if (!config || slot < 0 || state.cash < config.price || !action.id || state.machines.some(item => item.id === action.id)) return state;
+      const slots = [...state.slots];
+      slots[slot] = action.id;
+      return { ...state, cash: state.cash - config.price, slots, machines: [...state.machines, createMachine(action.id, action.machineType)] };
     }
-    case 'buy': {
-      const upgrade = UPGRADES.find(item => item.id === action.id);
-      if (!upgrade || state.upgrades.includes(action.id) || state.cash < upgrade.cost) return state;
-      return { ...state, cash: state.cash - upgrade.cost, upgrades: [...state.upgrades, action.id] };
+    case 'buy-slot': {
+      const cost = slotPrice(state.slots.length);
+      if (!Number.isSafeInteger(cost) || state.cash < cost) return state;
+      return { ...state, cash: state.cash - cost, slots: [...state.slots, null] };
+    }
+    case 'move': {
+      const from = state.slots.indexOf(action.machineId);
+      if (from < 0 || !Number.isInteger(action.to) || action.to < 0 || action.to >= state.slots.length || from === action.to) return state;
+      const slots = [...state.slots];
+      [slots[from], slots[action.to]] = [slots[action.to], slots[from]];
+      return { ...state, slots };
     }
   }
 }
