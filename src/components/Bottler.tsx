@@ -49,7 +49,11 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
         ? phase === "fill" && !auto
         : part === "carriage"
           ? (phase === "transfer" && !auto) ||
-            (phase === "fill" && !auto && b.valve === 0 && b.dripMs === 0)
+            (phase === "fill" &&
+              !auto &&
+              !owned("auto-capper") &&
+              b.valve === 0 &&
+              b.dripMs === 0)
           : part === "lever"
             ? phase === "cap" && !auto
             : phase === "collect" && !auto;
@@ -240,7 +244,7 @@ export function Bottler({ state, runtime, hint }: MachineRendererProps) {
       : FILL_X + slide * TRAVEL;
   const pull = phase === "cap" ? state.progress : 0;
   const flowing = phase === "fill" && (b.valve > 0 || b.dripMs > 0);
-  const angle = b.valve * BOTTLING.valveTravel * 180 / Math.PI;
+  const angle = (b.valve * BOTTLING.valveTravel * 180) / Math.PI;
   const sealed = phase === "collect";
   return (
     <div

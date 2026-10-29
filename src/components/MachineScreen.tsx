@@ -26,7 +26,7 @@ export function MachineScreen({ state, cash, number, dispatch, sound, renderer =
   const currentStep = phases.indexOf(state.phase);
   const instructions: Record<Phase,string> = {
     load: 'Drag a bottle into the filling bracket.',
-    fill: 'Turn clockwise to fill. Close, then slide right.',
+    fill: state.upgrades.includes('auto-capper') ? 'Turn clockwise to fill. Close to release.' : 'Turn clockwise to fill. Close, then slide right.',
     transfer: 'Slide the carriage beneath the capper.',
     cap: 'Pull the orange lever down.',
     feed: 'Drag paper onto the plate.',

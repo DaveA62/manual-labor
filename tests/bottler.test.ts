@@ -379,3 +379,34 @@ test("rule v1 Press-only clients remain compatible but cannot access Bottler sta
     /Game update required/,
   );
 });
+
+test("Auto Capper takes over after manual valve closure and drip, then stops at the next manual fill", () => {
+  let m = {
+    ...bottle(),
+    upgrades: [
+      "bottle-loader",
+      "auto-capper",
+      "crate-conveyor",
+    ] as MachineInstance["upgrades"],
+  };
+  m = advanceMachine(m, 10000);
+  assert.equal(m.phase, "fill");
+  assert.equal(m.bottler!.fill, 0);
+  m = operate(m, { type: "valve", amount: 1 });
+  m = advanceMachine(m, 3900);
+  assert.equal(m.phase, "fill");
+  assert.equal(m.bills, 0, "open valve must never transfer");
+  m = operate(m, { type: "valve", amount: -1 });
+  const partial = advanceMachine(m, 100);
+  assert.equal(partial.phase, "fill");
+  assert.equal(partial.bills, 0);
+  const next = advanceMachine(partial, 8 * 3600000);
+  assert.equal(next.bills, 1);
+  assert.equal(next.lifetime, 30);
+  assert.equal(next.phase, "fill");
+  assert.equal(next.bottler!.fill, 0);
+  const whole = advanceMachine(m, 240 + 800 + 650 + 850 + 700);
+  assert.equal(whole.bills, 1);
+  assert.equal(whole.phase, "fill");
+  assert.equal(whole.bottler!.fill, 0);
+});

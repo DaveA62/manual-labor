@@ -136,6 +136,18 @@ export function advanceBottler(
             progress: Math.min(0.999999, fill),
             bottler: { ...b, fill, dripMs },
           };
+        // Closing a nonempty bottle is the manual handoff. An installed capper
+        // owns transfer as well as sealing; it must not need a carriage nudge.
+        if (
+          b.valve === 0 &&
+          dripMs === 0 &&
+          fill > 0 &&
+          m.upgrades.includes("auto-capper")
+        ) {
+          m = { ...m, phase: "transfer", progress: 0 };
+          remaining -= dripTime;
+          continue;
+        }
         break;
       }
     } else {
