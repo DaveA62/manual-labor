@@ -12,3 +12,10 @@ export function recentDownSpeed(previous: number, delta: number, elapsed: number
   return elapsed > 0 ? Math.max(previous * Math.exp(-elapsed / 90), delta / elapsed) : previous;
 }
 export function resistedHeadTravel(distance: number) { return Math.min(132, Math.max(0, distance) * .92); }
+/** Continuous drive position across both lifts and alternating completed cycles. */
+export function driveAngle(phase: string, bills: number, progress: number) {
+  const sign = bills % 2 === 0 ? 1 : -1;
+  const base = bills % 2 === 0 ? 0 : 720;
+  const completed = ['stamp','lift','collect'].includes(phase) ? 360 : 0;
+  return base + sign * (completed + (phase === 'raise' || phase === 'lift' ? progress * 360 : phase === 'collect' ? 360 : 0));
+}

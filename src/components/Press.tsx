@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { automated, direction, earnings } from '../game/machines';
 import type { ManualAction, MachineInstance } from '../game/types';
-import { angleDelta, CRANK, inPlate, inTray, TAU, validStamp, recentDownSpeed, resistedHeadTravel } from '../game/gestures';
+import { angleDelta, CRANK, inPlate, inTray, TAU, validStamp, recentDownSpeed, resistedHeadTravel, driveAngle } from '../game/gestures';
 import { Frame, Head, Crank, Gear, Paper, Automation } from './press/Parts';
 import { useMechanicalMotion } from './press/useMechanicalMotion';
 import { feedback } from '../game/feedback';
@@ -12,7 +12,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
   const svg = useRef<SVGSVGElement>(null);
   const drag = useRef<Drag | null>(null);
   const [visual, setVisual] = useState<Drag | null>(null);
-  const [rotation, setRotation] = useState(state.progress * 360 * direction(state));
+  const [rotation, setRotation] = useState(driveAngle(state.phase, state.bills, state.progress));
   const lastRatchet = useRef(0);
   const previous = useRef({ phase: state.phase, bills: state.bills });
   const [collected, setCollected] = useState(0);
@@ -37,7 +37,7 @@ export function Press({ state, dispatch, sound, hint, onHint }: { state: Machine
   const directHead = visual?.kind === 'head' || (state.phase === 'lift' && state.progress === 0);
   const followedHead = useMechanicalMotion(draggedHeadY, directHead);
   const animatedHeadY = directHead ? draggedHeadY : followedHead;
-  const wheelAngle = auto && isTurning ? state.progress * 360 * direction(state) : rotation;
+  const wheelAngle = state.upgrades.includes('motor') ? driveAngle(state.phase, state.bills, state.progress) : rotation;
   useEffect(() => {
     if (previous.current.phase === 'stamp' && state.phase === 'lift') { setImpact(v=>v+1); feedback('stamp', sound); }
     if (state.bills > previous.current.bills) setCollected(v=>v+1);
