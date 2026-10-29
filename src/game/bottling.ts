@@ -1,3 +1,5 @@
+import { cents, NEUTRAL, timedDuration } from "./service/stats.ts";
+import type { ProductionModifiers } from "./service/stats.ts";
 import { BOTTLING } from "./definitions.ts";
 import {
   automated,
@@ -11,16 +13,20 @@ import {
 import type { MachineInstance, ManualAction } from "./types.ts";
 
 /** Pure family mechanics; simulation and cloud replay share this exact implementation. */
-export function completeBottlerPhase(m: MachineInstance): MachineInstance {
+export function completeBottlerPhase(
+  m: MachineInstance,
+  modifiers: ProductionModifiers = NEUTRAL,
+): MachineInstance {
   const phases = definition(m).phases;
-  const payout = m.phase === "collect" ? bottlePayout(m) : 0;
+  const payout = m.phase === "collect" ? bottlePayout(m, modifiers) : 0;
   const bills = m.bills + (payout > 0 ? 1 : 0);
   return {
     ...m,
     phase: phases[(phases.indexOf(m.phase) + 1) % phases.length],
     progress: 0,
     bills,
-    lifetime: m.lifetime + payout,
+    ...(payout > 0 && m.manualCycle ? { manualCycle: false } : {}),
+    lifetime: cents(m.lifetime + payout),
     bottler:
       payout > 0
         ? initialBottle(bills)
@@ -32,6 +38,7 @@ export function completeBottlerPhase(m: MachineInstance): MachineInstance {
 export function operateBottler(
   m: MachineInstance,
   action: ManualAction,
+  modifiers: ProductionModifiers = NEUTRAL,
 ): MachineInstance {
   const b = m.bottler!;
   if (
@@ -64,18 +71,21 @@ export function operateBottler(
   ) {
     if (!Number.isFinite(action.amount)) return m;
     const progress = Math.max(0, Math.min(1, m.progress + action.amount));
-    return progress >= 1 - 1e-9 ? completeBottlerPhase(m) : { ...m, progress };
+    return progress >= 1 - 1e-9
+      ? completeBottlerPhase(m, modifiers)
+      : { ...m, progress };
   }
   if (
     (action.type === "load" && m.phase === "load") ||
     (action.type === "collect" && m.phase === "collect")
   )
-    return completeBottlerPhase(m);
+    return completeBottlerPhase(m, modifiers);
   return m;
 }
 export function advanceBottler(
   machine: MachineInstance,
   elapsedMs: number,
+  modifiers: ProductionModifiers = NEUTRAL,
 ): MachineInstance {
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return machine;
   let m = machine,
@@ -83,14 +93,15 @@ export function advanceBottler(
   while (remaining > 1e-7) {
     if (m.phase === "load" && m.progress === 0 && fullyAutomated(m)) {
       // One whole configured size sequence; shared with the long-run rate estimate.
-      const duration = BOTTLING.sizes.length * averageCycleDuration(m);
+      const duration =
+        BOTTLING.sizes.length * averageCycleDuration(m, modifiers);
       const groups = Math.floor(remaining / duration);
       if (groups > 0) {
         const count = groups * BOTTLING.sizes.length;
         m = {
           ...m,
           bills: m.bills + count,
-          lifetime: m.lifetime + count * earnings(m),
+          lifetime: cents(m.lifetime + count * earnings(m, modifiers)),
           bottler: initialBottle(m.bills + count),
         };
         remaining -= groups * duration;
@@ -99,7 +110,11 @@ export function advanceBottler(
     }
     const b = m.bottler!;
     if (m.phase === "fill") {
-      const fillMs = definition(m).durationMs.fill! * BOTTLING.capacity[b.size];
+      const fillMs = timedDuration(
+        definition(m).durationMs.fill! * BOTTLING.capacity[b.size],
+        modifiers,
+        automated(m),
+      );
       if (automated(m)) {
         const needed = Math.max(0, (BOTTLING.regulatedFill - b.fill) * fillMs);
         const time = Math.min(remaining, needed);
@@ -116,7 +131,7 @@ export function advanceBottler(
           },
         };
         remaining -= time;
-        if (time + 1e-7 >= needed) m = completeBottlerPhase(m);
+        if (time + 1e-7 >= needed) m = completeBottlerPhase(m, modifiers);
         else break;
       } else {
         // An open manual valve can fill/spill unattended, but can never transfer or pay.
@@ -152,11 +167,14 @@ export function advanceBottler(
       }
     } else {
       if (!automated(m)) break;
-      const duration = definition(m).durationMs[m.phase]!;
+      const duration = timedDuration(
+        definition(m).durationMs[m.phase]!,
+        modifiers,
+      );
       const needed = (1 - m.progress) * duration;
       if (remaining + 1e-7 >= needed) {
         remaining = Math.max(0, remaining - needed);
-        m = completeBottlerPhase(m);
+        m = completeBottlerPhase(m, modifiers);
       } else {
         m = { ...m, progress: m.progress + remaining / duration };
         break;

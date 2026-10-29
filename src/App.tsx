@@ -1,3 +1,5 @@
+import { RetirementExperience } from "./components/continuum/RetirementExperience";
+import { createWorkshop } from "./game/engine";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UI, uiVariables, wideWorkshop } from "./config/ui";
@@ -18,9 +20,18 @@ import { money, compactMoney } from "./ui/format";
 type Screen = "storage" | "workshop" | "catalog";
 export default function App() {
   const game = useGame();
-  const { ref: content, width, height } = useElementSize<HTMLElement>();
+  const {
+    ref: content,
+    width,
+    height,
+  } = useElementSize<HTMLElement>(!game.state.service?.session);
   const wide = wideWorkshop(width, height);
-  const { state, dispatch, saved } = game;
+  const { state: canonical, dispatch, saved } = game;
+  const lastCareer = useRef(
+    canonical.service?.session ? createWorkshop() : canonical,
+  );
+  if (!canonical.service?.session) lastCareer.current = canonical;
+  const state = canonical.service?.session ? lastCareer.current : canonical;
   const [accountOpen, setAccountOpen] = useState(false);
   useEffect(() => {
     if (game.recovery || game.authNotice) setAccountOpen(true);
@@ -45,9 +56,18 @@ export default function App() {
   }, []);
   const openCatalog = useCallback(() => setScreen("catalog"), []);
   useEffect(() => {
+    if (canonical.service?.session) {
+      setAccountOpen(false);
+      setDialog(null);
+      setScreen("workshop");
+      setPayday(0);
+      previousLifetime.current = canonical.lifetime;
+    }
+  }, [canonical.service?.session?.id]);
+  useEffect(() => {
     if (state.lifetime > previousLifetime.current) {
       setPayday(state.lifetime - previousLifetime.current);
-      feedback("cash", sound);
+      if (!canonical.service?.session) feedback("cash", sound);
     }
     previousLifetime.current = state.lifetime;
   }, [state.lifetime, sound]);
@@ -56,7 +76,7 @@ export default function App() {
     const timer = window.setTimeout(() => setPayday(0), UI.animation.cashMs);
     return () => window.clearTimeout(timer);
   }, [payday, state.lifetime]);
-  return (
+  const factory = (
     <div
       className="game-shell"
       data-screen={screen}
@@ -158,7 +178,8 @@ export default function App() {
         {screen === "workshop" && (
           <div className={`workshop-composition ${wide ? "is-wide" : ""}`}>
             <MachineScreen
-              managed={wide}
+              service={state.service}
+              managed={wide || !!canonical.service?.session}
               key={machine.id}
               state={machine}
               cash={state.cash}
@@ -174,6 +195,7 @@ export default function App() {
               >
                 <Modifications
                   key={machine.id}
+                  service={state.service}
                   inline
                   open
                   onClose={() => {}}
@@ -196,6 +218,11 @@ export default function App() {
             )}
           </div>
         )}
+        {(game.transaction || game.servicePending) && (
+          <div className="service-transaction-shield" role="status">
+            Saving service transaction…
+          </div>
+        )}
         {game.blocked && (
           <div className="session-blocker" role="status">
             <p>
@@ -208,14 +235,17 @@ export default function App() {
         )}
       </main>
       <AccountPanel
-        open={accountOpen}
+        open={accountOpen && !canonical.service?.session}
         onClose={() => setAccountOpen(false)}
         game={game}
         session={game.session}
       />
-      <ShiftReport report={game.report} onCollect={game.session.acknowledge} />
+      <ShiftReport
+        report={canonical.service?.session ? null : game.report}
+        onCollect={game.session.acknowledge}
+      />
       <DialogPanel
-        open={dialog === "settings"}
+        open={dialog === "settings" && !canonical.service?.session}
         onClose={() => setDialog(null)}
         title="Workshop record"
         code="CONTROL PANEL / 01"
@@ -254,7 +284,7 @@ export default function App() {
           </Button>
           <Button tone="danger" onClick={() => setDialog("reset")}>
             <Icon name="reset" size={18} />
-            Reset save
+            {state.service ? "Reset workshop" : "Reset save"}
           </Button>
         </div>
         {import.meta.env.DEV && (
@@ -276,14 +306,20 @@ export default function App() {
         <span className="inspection-stamp">INSPECTION STATUS: PENDING</span>
       </DialogPanel>
       <DialogPanel
-        open={dialog === "reset"}
+        open={dialog === "reset" && !canonical.service?.session}
         onClose={() => setDialog(null)}
-        title="Reset workshop?"
-        code="DELETE LOCAL SAVE"
+        title={state.service ? "Restart workshop?" : "Reset workshop?"}
+        code={
+          state.service
+            ? "CAREER RESET / SERVICE RETAINED"
+            : "DELETE LOCAL SAVE"
+        }
         className="reset-dialog"
       >
         <p className="dialog-copy">
-          Deletes all machines, upgrades, cash, and production progress.
+          {state.service
+            ? "Resets career machines, upgrades, cash and progress. Service and lifetime records remain."
+            : "Deletes all machines, upgrades, cash, and production progress."}
         </p>
         <div className="settings-actions">
           <Button onClick={() => setDialog(null)}>Cancel</Button>
@@ -298,10 +334,21 @@ export default function App() {
               setDialog(null);
             }}
           >
-            Reset everything
+            {state.service ? "Restart workshop" : "Reset everything"}
           </Button>
         </div>
       </DialogPanel>
     </div>
+  );
+  return canonical.service?.session ? (
+    <RetirementExperience
+      key={canonical.service.session.id}
+      game={game}
+      session={game.session}
+      sound={sound}
+      factory={factory}
+    />
+  ) : (
+    factory
   );
 }

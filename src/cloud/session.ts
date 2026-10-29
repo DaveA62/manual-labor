@@ -1,3 +1,4 @@
+import type { ServiceCommand } from "../game/service/types.ts";
 import type { User } from "@supabase/supabase-js";
 import { createWorkshop, reducer } from "../game/engine.ts";
 import { readSave, writeSave } from "../game/save.ts";
@@ -74,6 +75,8 @@ export interface SessionView {
   ready: boolean;
   authNotice: string;
   blocked: boolean;
+  transaction: boolean;
+  servicePending: boolean;
 }
 const OWNER = "manual-labor:owner",
   LOCAL = "manual-labor:local:v1";
@@ -134,6 +137,11 @@ export class GameSession {
       ready: false,
       authNotice: "",
       blocked: false,
+      transaction: false,
+      servicePending:
+        this.owner !== "local" &&
+        !!this.parse<Cache>(this.cacheKey(this.owner))?.pending?.request
+          .command,
     };
   }
   getSnapshot = () => this.view;
@@ -227,7 +235,7 @@ export class GameSession {
         if (this.active) this.persist();
       }, 1000),
       setInterval(() => {
-        if (this.active) void this.sync();
+        if (this.active && !this.view.state.service?.session) void this.sync();
       }, 10000),
     ];
     this.cleanup = [
@@ -255,7 +263,13 @@ export class GameSession {
     this.cleanup.forEach((fn) => fn());
   }
   dispatch = (action: WorkshopAction) => {
-    if (this.view.blocked) return;
+    if (
+      this.view.blocked ||
+      this.view.transaction ||
+      this.view.servicePending ||
+      this.cache?.pending?.request.command
+    )
+      return;
     if (
       action.type !== "tick" &&
       this.cache &&
@@ -418,7 +432,12 @@ export class GameSession {
         ? validatedState(cached.current)
         : replay(cached.base, cached.events, cached.events.at(-1)?.at ?? 0)
             .state;
-      this.update({ state: current, blocked: false, localUnverified: false });
+      this.update({
+        state: current,
+        blocked: false,
+        localUnverified: false,
+        servicePending: !!cached.pending?.request.command,
+      });
       this.offlineNext = true;
       await this.sync(true);
       return;
@@ -480,7 +499,8 @@ export class GameSession {
     };
     this.setOwner(this.view.user!.id);
     this.update({
-      state: cloud.state,
+      state: validatedState(cloud.state),
+      servicePending: false,
       conflict: null,
       error: "",
       status: "Connecting",
@@ -636,11 +656,13 @@ export class GameSession {
         result.state,
         tail,
         this.active ? Math.max(0, this.activeElapsed - activeMark) : 0,
+        false,
       ).state;
       succeeded = true;
       this.update({
         state: predicted,
         status: "Synced",
+        servicePending: false,
         error: "",
         conflict: null,
         report: cache.reports[0] ?? null,
@@ -659,6 +681,51 @@ export class GameSession {
             void this.sync(true);
           });
       }
+    }
+  };
+  serviceOperation = async (command: ServiceCommand) => {
+    if (this.view.transaction) throw Error("Transaction in progress.");
+    if (
+      !this.cache ||
+      !this.transport ||
+      !this.view.user ||
+      this.detached ||
+      this.view.blocked ||
+      this.view.status !== "Synced" ||
+      this.flight
+    )
+      throw Error("Connect and synchronize before continuing.");
+    this.update({ transaction: true });
+    clearTimeout(this.syncTimer);
+    try {
+      await this.sync();
+      if (
+        this.view.status !== "Synced" ||
+        this.cache.pending ||
+        this.cache.events.length
+      )
+        throw Error("Synchronization required. Retry in Account.");
+      this.backup("Before service transaction");
+      this.update({ servicePending: true });
+      this.cache.pending = {
+        endAt: Date.now(),
+        request: {
+          id: requestId(),
+          revision: this.cache.revision,
+          events: [],
+          offline: false,
+          rulesVersion: RULES_VERSION,
+          command,
+        },
+      };
+      this.persist();
+      await this.sync();
+      if (this.view.status !== "Synced")
+        throw Error(
+          this.view.error || "Transaction pending. Retry synchronization.",
+        );
+    } finally {
+      this.update({ transaction: false });
     }
   };
   acknowledge = () => {

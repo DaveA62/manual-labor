@@ -1,3 +1,5 @@
+import { parseService } from "./service/codec.ts";
+import { cents } from "./service/stats.ts";
 import { BOTTLING, MACHINE_DEFINITIONS } from "./definitions.ts";
 import { createWorkshop } from "./engine.ts";
 import { createMachine } from "./machines.ts";
@@ -8,7 +10,7 @@ import type {
   UpgradeId,
   WorkshopState,
 } from "./types.ts";
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const SAVE_KEY = "manual-labor:save:v2";
 export const LEGACY_SAVE_KEY = "manual-labor:save:v1";
 const nonnegative = (value: unknown): value is number =>
@@ -16,7 +18,9 @@ const nonnegative = (value: unknown): value is number =>
 export const validCurrency = (value: unknown): value is number =>
   typeof value === "number" &&
   value >= 0 &&
-  (Number.isSafeInteger(value) || Number.isSafeInteger(value * 100));
+  (Number.isSafeInteger(value) ||
+    (Number.isSafeInteger(Math.round(value * 100)) &&
+      Math.abs(value * 100 - Math.round(value * 100)) < 1e-5));
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 function upgrades(value: unknown, type: MachineType): UpgradeId[] | null {
@@ -49,6 +53,8 @@ function parseMachine(value: unknown, version: number): MachineInstance | null {
   const owned = upgrades(value.upgrades, type);
   if (
     !owned ||
+    (value.manualCycle !== undefined &&
+      typeof value.manualCycle !== "boolean") ||
     !MACHINE_DEFINITIONS[type].phases.includes(value.phase as Phase) ||
     typeof value.progress !== "number" ||
     !Number.isFinite(value.progress) ||
@@ -91,6 +97,9 @@ function parseMachine(value: unknown, version: number): MachineInstance | null {
   }
   return {
     ...(bottler ? { bottler } : {}),
+    ...(value.manualCycle !== undefined
+      ? { manualCycle: value.manualCycle as boolean }
+      : {}),
     id: value.id,
     type,
     tier,
@@ -110,7 +119,7 @@ export function decodeSave(raw: string | null): WorkshopState | null {
       !record(data) ||
       !validCurrency(data.cash) ||
       !validCurrency(data.lifetime) ||
-      data.lifetime < data.cash ||
+      (data.lifetime < data.cash && data.service === undefined) ||
       !nonnegative(data.bills)
     )
       return null;
@@ -133,11 +142,32 @@ export function decodeSave(raw: string | null): WorkshopState | null {
       };
     }
     if (
-      (data.version !== 2 && data.version !== 3 && data.version !== 4) ||
+      (data.version !== 2 &&
+        data.version !== 3 &&
+        data.version !== 4 &&
+        data.version !== 5) ||
       !Array.isArray(data.machines) ||
-      data.machines.length === 0 ||
+      (data.machines.length === 0 && !data.service) ||
       !Array.isArray(data.slots) ||
       data.slots.length < 2
+    )
+      return null;
+    const service =
+      data.version === 5 && data.service !== undefined
+        ? parseService(data.service)
+        : undefined;
+    if (service === null || (data.version !== 5 && data.service !== undefined))
+      return null;
+    if (
+      service &&
+      (data.cash > cents(data.lifetime + service.grantedCash) ||
+        (service.session &&
+          (data.cash !== 0 ||
+            data.machines.length !== 0 ||
+            service.retiredEarnings !== data.lifetime ||
+            service.retiredUnits !== data.bills ||
+            service.careerMs !== 0)) ||
+        (!service.session && data.machines.length === 0))
     )
       return null;
     const machines = data.machines.map((value) =>
@@ -152,12 +182,20 @@ export function decodeSave(raw: string | null): WorkshopState | null {
       slotted.length !== valid.length ||
       new Set(slotted).size !== slotted.length ||
       slotted.some((id) => typeof id !== "string" || !ids.has(id)) ||
-      valid.reduce((sum, machine) => sum + machine.lifetime, 0) !==
-        data.lifetime ||
-      valid.reduce((sum, machine) => sum + machine.bills, 0) !== data.bills
+      cents(
+        valid.reduce(
+          (sum, machine) => sum + machine.lifetime,
+          service?.retiredEarnings ?? 0,
+        ),
+      ) !== data.lifetime ||
+      valid.reduce(
+        (sum, machine) => sum + machine.bills,
+        service?.retiredUnits ?? 0,
+      ) !== data.bills
     )
       return null;
     return {
+      ...(service ? { service } : {}),
       cash: data.cash,
       lifetime: data.lifetime,
       bills: data.bills,

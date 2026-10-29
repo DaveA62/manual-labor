@@ -1,3 +1,4 @@
+import type { ServiceProgress } from "./service/types.ts";
 export type PressPhase = 'feed' | 'raise' | 'stamp' | 'lift' | 'collect';
 export type BottlerPhase = 'load' | 'fill' | 'transfer' | 'cap' | 'collect';
 export type Phase = PressPhase | BottlerPhase;
@@ -25,8 +26,11 @@ export interface MachineInstance {
   lifetime: number;
   bills: number;
   bottler?: BottlerState;
+  /** Any accepted manual action in this cycle, retained through automation changes. */
+  manualCycle?: boolean;
 }
 export interface WorkshopState {
+  service?: ServiceProgress;
   cash: number;
   lifetime: number;
   bills: number;

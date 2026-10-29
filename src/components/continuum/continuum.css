@@ -1,0 +1,608 @@
+/* The Continuum is the sole deliberate visual exception to the factory palette. */
+.continuum {
+  --void: #08070e;
+  --silver: #dedbe9;
+  --violet: #ad97df;
+  --gold: #e4cf99;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--void);
+  color: var(--silver);
+  font-family: var(--body);
+  overflow: hidden;
+  isolation: isolate;
+  touch-action: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.continuum-nebula,
+.continuum-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+.continuum-nebula {
+  background:
+    radial-gradient(ellipse at 47% 47%, #38234b55, transparent 47%),
+    radial-gradient(ellipse at 16% 80%, #28284644, transparent 50%),
+    radial-gradient(ellipse at 86% 23%, #4c3c1c22, transparent 45%);
+}
+.continuum-stars {
+  opacity: 0.35;
+  background-image:
+    radial-gradient(1px 1px at 17% 31%, #e8dff8 98%, transparent),
+    radial-gradient(1px 1px at 71% 67%, #baa4dc 98%, transparent),
+    radial-gradient(1px 1px at 45% 88%, #e4cf99 98%, transparent);
+  background-size:
+    283px 311px,
+    359px 239px,
+    431px 373px;
+  animation: continuum-drift 60s linear infinite;
+}
+.continuum-heading {
+  position: absolute;
+  top: max(22px, env(safe-area-inset-top));
+  left: max(28px, env(safe-area-inset-left));
+  right: max(28px, env(safe-area-inset-right));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  z-index: 3;
+  pointer-events: none;
+}
+.continuum-heading h1 {
+  font-family: var(--heading);
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin: 7px 0;
+  text-transform: none;
+}
+.continuum-eyebrow {
+  color: #c5b4e2;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.service-balance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: right;
+}
+.service-balance strong {
+  font-family: var(--heading);
+  font-size: 47px;
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 0 0 25px #bea37955;
+}
+.service-balance span {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  max-width: 90px;
+  line-height: 1.6;
+}
+.continuum-world {
+  position: absolute;
+  inset: 90px 0 90px;
+}
+.continuum-world svg {
+  display: block;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.continuum-world svg:active {
+  cursor: grabbing;
+}
+.continuum-camera {
+  transition: transform 70ms linear;
+}
+.continuum-edge {
+  fill: none;
+  stroke: #796295;
+  stroke-width: 1.4;
+  opacity: 0.45;
+  stroke-dasharray: 2 5;
+}
+.continuum-edge.is-lit {
+  stroke: #d7bfe6;
+  stroke-width: 2;
+  opacity: 0.8;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 5px #a28bc966);
+}
+.continuum-node {
+  color: #c2b9d5;
+  cursor: pointer;
+  outline: none;
+  animation: node-discover 0.8s ease-out both;
+}
+.node-halo {
+  fill: #8d6ac61a;
+  stroke: #8063a744;
+  stroke-width: 1;
+}
+.node-core {
+  fill: #14101f;
+  stroke: #9c89b3;
+  stroke-width: 1.5;
+}
+.node-orbit {
+  fill: none;
+  stroke: #ad97df;
+  stroke-width: 1;
+  opacity: 0.45;
+}
+.node-sigil {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.node-name,
+.node-level {
+  text-anchor: middle;
+  stroke: none;
+  fill: currentColor;
+  font-family: var(--body);
+  font-size: 13px;
+  paint-order: stroke;
+  stroke: #08070e;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+.node-level {
+  font-size: 11px;
+  fill: #b3a2c9;
+}
+.is-locked .node-core {
+  stroke: #746580;
+}
+.is-locked {
+  color: #b7acc8;
+}
+.is-available .node-core {
+  stroke: #c9b4ee;
+  filter: drop-shadow(0 0 9px #ad97df55);
+}
+.is-purchased .node-core {
+  fill: #e4cf99;
+  stroke: #fff1c9;
+  filter: drop-shadow(0 0 13px #dbc58688);
+}
+.is-purchased .node-sigil {
+  stroke: #3b2c48;
+}
+.is-purchased {
+  color: #f0ddb4;
+}
+.is-selected .node-orbit,
+.continuum-node:focus-visible .node-orbit {
+  stroke: #fff1c9;
+  stroke-width: 2;
+  opacity: 1;
+}
+.is-selected .node-halo {
+  stroke: #c5acdc88;
+}
+.continuum-camera-controls {
+  position: absolute;
+  left: max(28px, env(safe-area-inset-left));
+  bottom: 116px;
+  display: flex;
+  gap: 7px;
+  z-index: 4;
+}
+.continuum button {
+  min-height: 44px;
+  min-width: 44px;
+  border: 1px solid #a38cbc66;
+  background: #14101fd9;
+  color: #eee4fc;
+  font: 600 12px var(--body);
+  padding: 10px 16px;
+  cursor: pointer;
+  touch-action: manipulation;
+  letter-spacing: 0.6px;
+}
+.continuum button:hover:not(:disabled) {
+  border-color: #dfc99e;
+  background: #2c203a;
+}
+.continuum button:focus-visible {
+  outline: 2px solid #f0ddb4;
+  outline-offset: 4px;
+}
+.continuum button:disabled {
+  color: #b4a7c4;
+  opacity: 0.7;
+  cursor: default;
+}
+.continuum-camera-controls button {
+  padding: 0;
+  font-size: 21px;
+  border-radius: 50%;
+}
+.continuum-inspector {
+  position: absolute;
+  right: max(28px, env(safe-area-inset-right));
+  bottom: 110px;
+  width: 310px;
+  padding: 22px 20px 18px;
+  background: #100c1b;
+  border-top: 1px solid #b7a0cf88;
+  box-shadow: 0 -18px 60px #08070e88;
+  z-index: 5;
+}
+.continuum-inspector h2 {
+  font-family: var(--heading);
+  font-size: 28px;
+  margin: 10px 24px 10px 0;
+  text-transform: none;
+  color: #f0e4fd;
+}
+.continuum-inspector p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 8px 0 17px;
+}
+.continuum .continuum-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 23px;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.continuum .continuum-action {
+  color: #f0ddb4;
+  border-color: #b7a079a6;
+  background: #21192a;
+  white-space: normal;
+  line-height: 1.4;
+}
+.continuum-inspector > .continuum-action {
+  width: 100%;
+  font-size: 11px;
+}
+.skill-requirements {
+  color: #d2c1e5;
+  font-size: 11px !important;
+}
+.continuum-footer {
+  position: absolute;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  left: max(28px, env(safe-area-inset-left));
+  right: max(28px, env(safe-area-inset-right));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  z-index: 6;
+}
+.recognition-mark {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #c5b4e2;
+  line-height: 1.7;
+}
+.recognition-mark b {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #e4cf99;
+}
+.career-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.career-confirm > span {
+  font-size: 10px;
+  max-width: 105px;
+  line-height: 1.5;
+}
+.continuum-error {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #1b1428;
+  color: #ecdbff;
+  font-size: 12px;
+  z-index: 8;
+}
+.continuum-error button {
+  font-size: 11px;
+  padding: 6px;
+}
+.retirement-film {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 200;
+  overflow: hidden;
+  animation: film-clear 0.5s ease-out calc(var(--film-time) - 0.5s) forwards;
+}
+.retirement-factory-echo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  animation: crt-off 2s cubic-bezier(0.65, 0, 0.35, 1) both;
+  overflow: hidden;
+  filter: saturate(0.45);
+}
+.retirement-light {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--origin-shift, 0px));
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #eee7ff;
+  box-shadow: 0 0 22px #c7abf0;
+  transform: translate(-50%, -50%) scale(0);
+  animation: first-light 2.5s ease-out 3.3s both;
+  pointer-events: none;
+}
+.retirement-award {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - var(--origin-shift, 0px) + 70px);
+  text-align: center;
+  color: #e4cf99;
+  font: 20px var(--heading);
+  letter-spacing: 2px;
+  opacity: 0;
+  animation: award-arrive 0.7s ease-out 4.9s forwards;
+}
+.retirement-award strong {
+  display: block;
+  font-size: 42px;
+  margin-bottom: 4px;
+}
+.retirement-film.is-later .retirement-factory-echo {
+  animation-duration: 1s;
+}
+.retirement-film.is-later .retirement-light {
+  animation-delay: 0.6s;
+  animation-duration: 1s;
+}
+.retirement-film.is-later .retirement-award {
+  animation-delay: 1s;
+}
+.film-skip {
+  position: absolute;
+  right: max(22px, env(safe-area-inset-right));
+  bottom: max(22px, env(safe-area-inset-bottom));
+  min-width: 70px;
+  min-height: 44px;
+  border: 0;
+  color: #dcd0ef;
+  background: #16101e;
+  font: 12px var(--body);
+}
+@keyframes crt-off {
+  0%,
+  12% {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1, 0.004);
+    opacity: 1;
+    filter: brightness(2) saturate(0);
+  }
+  78% {
+    transform: scale(0.004, 0.004);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+@keyframes first-light {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(12);
+    opacity: 1;
+    box-shadow:
+      0 0 7px #c7abf0,
+      0 0 20px #ad97df66;
+  }
+}
+@keyframes award-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes film-clear {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes node-discover {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes continuum-drift {
+  to {
+    transform: translate3d(12px, -10px, 0);
+  }
+}
+@media (max-width: 650px) {
+  .continuum-heading {
+    top: max(17px, env(safe-area-inset-top));
+    left: 18px;
+    right: 18px;
+    gap: 8px;
+  }
+  .continuum-heading h1 {
+    font-size: 25px;
+    max-width: 190px;
+  }
+  .continuum-eyebrow {
+    font-size: 9px;
+    letter-spacing: 1.2px;
+  }
+  .service-balance {
+    gap: 6px;
+  }
+  .service-balance strong {
+    font-size: 38px;
+  }
+  .service-balance span {
+    max-width: 62px;
+    font-size: 9px;
+    letter-spacing: 0.7px;
+  }
+  .continuum-inspector {
+    left: 18px;
+    right: 18px;
+    bottom: 104px;
+    width: auto;
+    padding: 14px 16px;
+  }
+  .continuum-inspector h2 {
+    font-size: 25px;
+    margin: 5px 26px 6px 0;
+  }
+  .continuum-inspector p {
+    font-size: 12px;
+    margin: 6px 0 12px;
+    line-height: 1.4;
+  }
+  .continuum-footer {
+    left: 18px;
+    right: 18px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    gap: 9px;
+  }
+  .continuum-footer > .continuum-action {
+    max-width: 170px;
+    font-size: 11px;
+  }
+  .recognition-mark {
+    font-size: 8px;
+    letter-spacing: 0.4px;
+    max-width: 150px;
+  }
+  .recognition-mark b {
+    font-size: 9px;
+  }
+  .continuum-camera-controls {
+    left: 18px;
+    top: 110px;
+    bottom: auto;
+  }
+  .career-confirm {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+  .career-confirm > span {
+    max-width: none;
+    width: 100%;
+    text-align: right;
+    font-size: 8px;
+  }
+  .career-confirm button {
+    font-size: 9px;
+    padding: 7px;
+  }
+  .continuum-error {
+    top: 86px;
+    font-size: 11px;
+  }
+  .node-name {
+    font-size: 14px;
+  }
+}
+@media (max-height: 540px) and (min-width: 651px) {
+  .continuum-heading {
+    top: 12px;
+  }
+  .continuum-heading h1 {
+    font-size: 26px;
+  }
+  .continuum-inspector {
+    bottom: 76px;
+    width: 285px;
+    right: 18px;
+    padding: 12px 14px;
+  }
+  .continuum-inspector h2 {
+    font-size: 23px;
+    margin: 6px 20px 6px 0;
+  }
+  .continuum-inspector p {
+    font-size: 11px;
+    margin: 6px 0 10px;
+    line-height: 1.4;
+  }
+  .continuum-footer {
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .continuum-camera-controls {
+    left: 18px;
+    top: 94px;
+    bottom: auto;
+  }
+  .continuum-error {
+    top: 72px;
+  }
+  .recognition-mark {
+    max-width: 170px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .continuum *,
+  .retirement-film * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .retirement-factory-echo {
+    opacity: 0;
+  }
+  .retirement-light {
+    transform: translate(-50%, -50%) scale(8);
+    opacity: 0.6;
+  }
+  .retirement-award {
+    opacity: 1;
+  }
+  .retirement-film {
+    animation: none;
+  }
+}

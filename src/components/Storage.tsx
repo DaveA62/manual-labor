@@ -1,8 +1,8 @@
+import { productionModifiers, storagePrice } from "../game/service/stats";
 import { UI } from '../config/ui';
 import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
 import { feedback } from '../game/feedback';
-import { slotPrice } from '../game/definitions';
 import { automated, definition, earningsPerMinute, machineStatus, phaseLabel, tier } from '../game/machines';
 import type { WorkshopAction, WorkshopState } from '../game/types';
 import { MachineThumbnail } from './MachineThumbnail';
@@ -29,7 +29,7 @@ export function Storage({ state, dispatch, onOpen, onShop, embedded = false, sel
   const page = clampPage(requestedPage, pages);
   const first = page * layout.size;
   const machines = new Map(state.machines.map((machine, index) => [machine.id, { machine, number: index + 1 }]));
-  const cost = slotPrice(state.slots.length);
+  const cost = storagePrice(state);
   function clearPageHold() {
     window.clearTimeout(pageHold.current);
     hoveredPage.current = null;

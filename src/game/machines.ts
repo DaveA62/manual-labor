@@ -1,3 +1,13 @@
+import {
+  cents,
+  NEUTRAL,
+  payoutFactor,
+  timedDuration,
+  upgradeFactor,
+  prestigeFactor,
+} from "./service/stats.ts";
+import type { ProductionModifiers } from "./service/stats.ts";
+import type { ServiceProgress } from "./service/types.ts";
 import { BOTTLING, PRESS_BALANCE, MACHINE_DEFINITIONS } from "./definitions.ts";
 import type {
   MachineInstance,
@@ -54,12 +64,16 @@ export function bottleQuality(fill: number) {
       ? "Acceptable"
       : "Poor";
 }
-export function bottlePayout(machine: MachineInstance) {
+export function bottlePayout(
+  machine: MachineInstance,
+  modifiers: ProductionModifiers = NEUTRAL,
+) {
   const b = machine.bottler!;
   const quality = bottleQuality(b.fill);
   return (
     Math.round(
       tier(machine).baseEarnings *
+        payoutFactor(machine, modifiers) *
         (b.regulated
           ? 1
           : quality === "Precise"
@@ -82,27 +96,47 @@ export const nextTier = (machine: MachineInstance) => {
 export const upgradePrice = (
   machine: MachineInstance,
   upgradeId: UpgradeId,
+  service?: ServiceProgress,
 ) => {
   const upgrade = definition(machine).upgrades.find(
     (item) => item.id === upgradeId,
   );
   return upgrade
-    ? upgrade.cost * tier(machine).upgradePriceMultiplier
+    ? cents(
+        upgrade.cost *
+          tier(machine).upgradePriceMultiplier *
+          upgradeFactor(machine, service),
+      )
     : Infinity;
 };
-export const canRefit = (machine: MachineInstance, cash: number) => {
+export const refitPrice = (
+  machine: MachineInstance,
+  service?: ServiceProgress,
+) =>
+  cents((nextTier(machine)?.refit?.fee ?? Infinity) * prestigeFactor(service));
+export const canRefit = (
+  machine: MachineInstance,
+  cash: number,
+  service?: ServiceProgress,
+) => {
   const requirements = nextTier(machine)?.refit;
   return (
     !!requirements &&
-    cash >= requirements.fee &&
+    cash >= refitPrice(machine, service) &&
     requirements.requiredUpgrades.every((id) => machine.upgrades.includes(id))
   );
 };
-export const earnings = (machine: MachineInstance) =>
-  tier(machine).baseEarnings *
-  (machine.upgrades.includes("printing")
-    ? PRESS_BALANCE.printingMultiplier
-    : 1);
+export const earnings = (
+  machine: MachineInstance,
+  modifiers: ProductionModifiers = NEUTRAL,
+) =>
+  cents(
+    tier(machine).baseEarnings *
+      payoutFactor(machine, modifiers) *
+      (machine.upgrades.includes("printing")
+        ? PRESS_BALANCE.printingMultiplier
+        : 1),
+  );
 export const direction = (machine: MachineInstance) =>
   machine.bills % 2 === 0 ? 1 : -1;
 export const automated = (
@@ -113,17 +147,26 @@ export const automated = (
   machine.upgrades.includes(definition(machine).automation[phase]!);
 export const fullyAutomated = (machine: MachineInstance) =>
   definition(machine).phases.every((phase) => automated(machine, phase));
-export const cycleDuration = (machine: MachineInstance) =>
+export const cycleDuration = (
+  machine: MachineInstance,
+  modifiers: ProductionModifiers = NEUTRAL,
+) =>
   definition(machine).phases.reduce(
     (total, phase) =>
       total +
-      definition(machine).durationMs[phase]! *
-        (machine.type === "bottler" && phase === "fill"
-          ? BOTTLING.capacity[machine.bottler!.size]
-          : 1),
+      timedDuration(
+        definition(machine).durationMs[phase]! *
+          (machine.type === "bottler" && phase === "fill"
+            ? BOTTLING.capacity[machine.bottler!.size]
+            : 1),
+        modifiers,
+      ),
     0,
   );
-export const averageCycleDuration = (machine: MachineInstance) =>
+export const averageCycleDuration = (
+  machine: MachineInstance,
+  modifiers: ProductionModifiers = NEUTRAL,
+) =>
   machine.type === "bottler"
     ? BOTTLING.sizes.reduce(
         (total, size) =>
@@ -131,16 +174,23 @@ export const averageCycleDuration = (machine: MachineInstance) =>
           definition(machine).phases.reduce(
             (sum, phase) =>
               sum +
-              definition(machine).durationMs[phase]! *
-                (phase === "fill" ? BOTTLING.capacity[size] : 1),
+              timedDuration(
+                definition(machine).durationMs[phase]! *
+                  (phase === "fill" ? BOTTLING.capacity[size] : 1),
+                modifiers,
+              ),
             0,
           ),
         0,
       ) / BOTTLING.sizes.length
-    : cycleDuration(machine);
-export const earningsPerMinute = (machine: MachineInstance) =>
+    : cycleDuration(machine, modifiers);
+export const earningsPerMinute = (
+  machine: MachineInstance,
+  modifiers: ProductionModifiers = NEUTRAL,
+) =>
   fullyAutomated(machine)
-    ? (earnings(machine) * 60000) / averageCycleDuration(machine)
+    ? (earnings({ ...machine, manualCycle: false }, modifiers) * 60000) /
+      averageCycleDuration(machine, modifiers)
     : 0;
 export const machineStatus = (machine: MachineInstance) =>
   fullyAutomated(machine)

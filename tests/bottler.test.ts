@@ -368,7 +368,7 @@ test("rule v1 Press-only clients remain compatible but cannot access Bottler sta
     rulesVersion: 1,
   };
   await synchronize("owner", req, repo);
-  assert.equal(record!.schemaVersion, 4);
+  assert.equal(record!.schemaVersion, 5);
   record!.state = workshop([bottle()]);
   await assert.rejects(
     synchronize(

@@ -1,9 +1,10 @@
-import { reducer } from "../game/engine.ts";
+import { derivedStats } from "../game/service/stats.ts";
+import { RETIREMENT } from "../config/retirement.ts";
+import { advanceWorkshop, reducer } from "../game/engine.ts";
 import { ECONOMY, MACHINE_DEFINITIONS } from "../game/definitions.ts";
 import { tier } from "../game/machines.ts";
 import { decodeSave, SAVE_VERSION, validCurrency } from "../game/codec.ts";
 import type { WorkshopState } from "../game/types.ts";
-import { OFFLINE_CAP_MS } from "./protocol.ts";
 import type { PlayerAction, ShiftReport, TimedAction } from "./protocol.ts";
 const record = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
@@ -70,13 +71,17 @@ export function replay(
   state: WorkshopState,
   events: readonly TimedAction[],
   elapsedMs: number,
+  offline = true,
 ) {
   let current = state,
     cursor = 0;
-  const budget = Math.min(OFFLINE_CAP_MS, Math.max(0, elapsedMs));
+  const budget = Math.min(
+    derivedStats(state.service).offlineMs,
+    Math.max(0, elapsedMs),
+  );
   const autoEarnings = new Map<string, number>();
   function advance(to: number) {
-    const next = reducer(current, { type: "tick", elapsedMs: to - cursor });
+    const next = advanceWorkshop(current, to - cursor, offline);
     next.machines.forEach((m) => {
       const before = current.machines.find((old) => old.id === m.id);
       const earned = m.lifetime - (before?.lifetime ?? m.lifetime);
@@ -120,7 +125,10 @@ export function offlineReport(
     ? {
         id: reportId,
         elapsedMs: Math.max(0, elapsedMs),
-        eligibleMs: Math.min(OFFLINE_CAP_MS, Math.max(0, elapsedMs)),
+        eligibleMs: Math.min(
+          derivedStats(before.service).offlineMs,
+          Math.max(0, elapsedMs),
+        ),
         total,
         machines,
       }
@@ -139,7 +147,7 @@ export function validReport(value: unknown): value is ShiftReport {
     typeof value.eligibleMs !== "number" ||
     !Number.isFinite(value.eligibleMs) ||
     value.eligibleMs < 0 ||
-    value.eligibleMs > OFFLINE_CAP_MS ||
+    value.eligibleMs > RETIREMENT.offlineCapMs ||
     !Array.isArray(value.machines)
   )
     return false;
@@ -156,6 +164,7 @@ export function validReport(value: unknown): value is ShiftReport {
 export function pristineSave(state: WorkshopState) {
   const m = state.machines[0];
   return (
+    !state.service &&
     state.cash === 0 &&
     state.lifetime === 0 &&
     state.bills === 0 &&

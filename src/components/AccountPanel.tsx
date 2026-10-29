@@ -1,3 +1,4 @@
+import { RetirementPanel } from "./RetirementPanel";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Button, DialogPanel } from "../ui/Controls";
@@ -22,7 +23,7 @@ export function AccountPanel({
   game: SessionView;
   session: GameSession;
 }) {
-  const [tab, setTab] = useState<"account" | "sync">("account");
+  const [tab, setTab] = useState<"account" | "sync" | "service">("account");
   const [form, setForm] = useState<Form>("home");
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState("");
@@ -179,9 +180,10 @@ export function AccountPanel({
         <Button aria-pressed={tab === "sync"} onClick={() => setTab("sync")}>
           Synchronization
         </Button>
+        <Button aria-pressed={tab === "service"} onClick={() => setTab("service")}>Service</Button>
       </nav>
       <div className="account-content">
-        {tab === "sync" ? (
+        {tab === "service" ? <RetirementPanel game={game} session={session}/> : tab === "sync" ? (
           <div className="account-sync">
             <p className="account-notice" role="status">
               {game.error ||

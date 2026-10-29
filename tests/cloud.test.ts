@@ -144,7 +144,7 @@ test("cloud bootstrap preserves legacy migration, IDs, tiers, order, upgrades an
   const forged = workshop([full("gold", "gold")], 999999);
   const second = await synchronize("player", request(1, forged), repo);
   assert.deepEqual(second.state, migrated);
-  assert.equal(second.schemaVersion, 4);
+  assert.equal(second.schemaVersion, 5);
 });
 test("server caps independent tier earnings at eight hours, partial automation stops, manual presses do not run", async () => {
   const repo = new Repository();

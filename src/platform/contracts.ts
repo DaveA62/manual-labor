@@ -1,5 +1,14 @@
 /** Host services only. Native adapters are installed before mounting React. */
-export type FeedbackKind = 'click' | 'stamp' | 'cash' | 'buy' | 'pickup' | 'glass' | 'seal';
+export type FeedbackKind =
+  | "click"
+  | "stamp"
+  | "cash"
+  | "buy"
+  | "pickup"
+  | "glass"
+  | "seal"
+  | "continuum"
+  | "reveal";
 export interface SaveStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -15,5 +24,6 @@ export interface GamePlatform {
     now(): number;
     subscribe(listener: (active: boolean) => void): () => void;
   };
+  silence?(): void;
   feedback(kind: FeedbackKind, sound: boolean): void;
 }

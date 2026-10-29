@@ -98,3 +98,5 @@ Run `npm test` for pagination, isolation, simultaneous production, all automatio
 The BT–02 Bottling Machine is available in the Catalog for $250. Its rotary flow valve, bottle carriage, spring capper and swipe collection form a second manual cycle. Four independent upgrades, Water/Soda/Premium refits, quality payouts, shared Storage and trusted offline production are included. See [Bottler balance and architecture](docs/BOTTLER.md). Existing saves migrate to schema 4 automatically.
 
 For tuning prices, tier output, upgrade/refit costs, Storage, offline limits and desktop layout, use [CONFIGURATION.md](docs/CONFIGURATION.md). Wide Workshops show the machine beside shared Modifications and paginated Storage; narrow or short windows retain the compact screen.
+
+Retirement is available in **Account → Service** once current cash funds a Year of Service. It opens the persisted, retirement-only Service Continuum. See [RETIREMENT.md](docs/RETIREMENT.md) for all 16 nodes, shared bonus groups, provisional balance, schema 5 migration and atomic cloud operations.

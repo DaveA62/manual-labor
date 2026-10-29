@@ -1,8 +1,9 @@
+import type { ServiceCommand } from "../game/service/types.ts";
 import type { WorkshopAction, WorkshopState } from "../game/types.ts";
 import { SAVE_VERSION } from "../game/codec.ts";
 export const CLOUD_SCHEMA = SAVE_VERSION;
-export const RULES_VERSION = 2;
-import { OFFLINE } from '../config/production.ts';
+export const RULES_VERSION = 3;
+import { OFFLINE } from "../config/production.ts";
 export const OFFLINE_CAP_MS = OFFLINE.capMs;
 export type PlayerAction = Exclude<WorkshopAction, { type: "tick" }>;
 export interface TimedAction {
@@ -26,6 +27,7 @@ export interface CloudRecord {
   reports: ShiftReport[];
 }
 export interface SyncRequest {
+  command?: ServiceCommand;
   id: string;
   revision: number;
   events: TimedAction[];

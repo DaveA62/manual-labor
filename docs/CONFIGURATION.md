@@ -45,3 +45,17 @@ Tune values in `src/config/`. `src/game/definitions.ts` is the shared registry a
 4. Deploy the authenticated function with its relative shared imports (including `src/config/economy.ts`, `production.ts`, and `machines/{types,moneyPress,bottler}.ts`). See [SUPABASE_SETUP.md](SUPABASE_SETUP.md). Publish the Pages frontend using the existing workflow.
 
 Numeric balance changes normally need no SQL migration. Removing/renaming IDs, changing phase meaning, or changing persisted field interpretation requires an explicit versioned codec/cloud migration and recovery plan. Never clear player data to apply configuration. Existing cash and lifetime statistics are historical records; tuning output changes future production only. For a live rate change, plan the checkpoint cutover so an absence is not inadvertently repriced under a new rate.
+
+## Retirement / permanent Service (Task 10)
+
+| Change | Exact file | Property | Supabase? | Deployment / migration |
+| --- | --- | --- | --- | --- |
+| Year conversion | `src/config/retirement.ts` | `RETIREMENT.pointBase`, `.pointGrowth` | Yes | Both, rules bump; never rewrite earned/spent history |
+| Recognition / caps / minimum phase | Same | `.recognition`, `*DiscountCap`, `.minimumPhaseMs`, `.offlineCapMs` | Yes | Both, rules bump; verify existing careers |
+| Starting cash | Same | `.startingCashPriceMultiple` × Cash Press list price × skill level | Yes | Both; affects future careers |
+| Early career window | Same | `.seniorityMs` | Yes | Both; persisted career age remains |
+| Skills, effects and prerequisites | `src/config/continuum/skills.ts` | `SKILLS[].max`, `.prerequisites`, `.effects` | Yes | Both; ID removals/prerequisite changes need migration review |
+| Spatial layout / discovery | Same | `SKILLS[].x/y`, `CONNECTIONS` | Discovery yes | Both for discovery; topology changes need saved-closure migration review |
+| Camera / transition timing | `src/config/retirement.ts` | `CONTINUUM` | No game rules | Frontend only |
+
+See [RETIREMENT.md](RETIREMENT.md). Save schema is now 5/rules 3. Defaults from Task 09 remain unchanged for unretired accounts. Permanent points are not a device-importable resource. Changing rates on live careers requires an explicit checkpoint cutover, as with machine tuning.

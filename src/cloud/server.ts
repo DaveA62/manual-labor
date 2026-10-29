@@ -1,3 +1,6 @@
+import { applyServiceCommand } from "../game/service/progression.ts";
+import { validServiceCommand } from "./service.ts";
+import { derivedStats } from "../game/service/stats.ts";
 import { createWorkshop } from "../game/engine.ts";
 import { CLOUD_SCHEMA, RULES_VERSION } from "./protocol.ts";
 import type { CloudRecord, SyncRequest, SyncResult } from "./protocol.ts";
@@ -27,18 +30,26 @@ export async function synchronize(
 ): Promise<SyncResult> {
   if (!request || typeof request !== "object")
     throw new Error("Invalid synchronization request.");
-  if (request.rulesVersion !== RULES_VERSION && request.rulesVersion !== 1)
+  if (![RULES_VERSION, 1, 2].includes(request.rulesVersion))
     throw new Error("Game update required. Reload before syncing.");
   if (
     !/^[0-9a-f-]{36}$/i.test(request.id) ||
     !Number.isSafeInteger(request.revision) ||
     request.revision < 0 ||
-    !validEvents(request.events)
+    !validEvents(request.events) ||
+    typeof request.offline !== "boolean" ||
+    (request.command !== undefined && !validServiceCommand(request.command))
   )
     throw new Error("Invalid synchronization request.");
   const loaded = await repository.read(playerId, request.id);
   if (loaded.receipt) return loaded.receipt;
   const old = loaded.record;
+  if (request.rulesVersion < 3 && (old?.state.service || request.command))
+    throw Error("Game update required. Reload before syncing.");
+  if (!old && request.initial?.service)
+    throw Error(
+      "Permanent service progress cannot be imported from a device save.",
+    );
   // Rules v1 has identical Press semantics. Keep already-open Press-only clients working.
   if (
     request.rulesVersion === 1 &&
@@ -70,10 +81,29 @@ export async function synchronize(
     ? Math.max(0, Date.parse(loaded.now) - Date.parse(old.checkpoint))
     : 0;
   if (!Number.isFinite(elapsed)) throw new Error("Invalid server checkpoint.");
-  const advanced = replay(initial, request.events, elapsed);
+  const isOffline = request.offline || elapsed >= 30000;
+  const advanced = replay(initial, request.events, elapsed, isOffline);
+  // All wall time consumes Seniority, even beyond the production cap.
+  if (advanced.state.service && !advanced.state.service.session)
+    advanced.state = {
+      ...advanced.state,
+      service: {
+        ...advanced.state.service,
+        careerMs:
+          advanced.state.service.careerMs +
+          Math.max(0, elapsed - derivedStats(initial.service).offlineMs),
+      },
+    };
+  if (request.command)
+    advanced.state = applyServiceCommand(
+      advanced.state,
+      request.command,
+      request.id,
+      loaded.now,
+    );
   validatedState(advanced.state);
   const report =
-    (request.offline || elapsed >= 30000) && elapsed > 0
+    !request.command && isOffline && elapsed > 0
       ? offlineReport(
           initial,
           advanced.state,
@@ -88,6 +118,9 @@ export async function synchronize(
     revision: request.revision + 1,
     checkpoint: loaded.now,
     schemaVersion: CLOUD_SCHEMA,
-    reports: [...(old?.reports ?? []), ...(report ? [report] : [])],
+    reports:
+      request.command?.type === "retire"
+        ? []
+        : [...(old?.reports ?? []), ...(report ? [report] : [])],
   });
 }
