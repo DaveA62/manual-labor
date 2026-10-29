@@ -1,4 +1,4 @@
-import { MACHINE_DEFINITIONS } from "./definitions.ts";
+import { BOTTLING, MACHINE_DEFINITIONS } from "./definitions.ts";
 import { createWorkshop } from "./engine.ts";
 import { createMachine } from "./machines.ts";
 import type {
@@ -8,10 +8,15 @@ import type {
   UpgradeId,
   WorkshopState,
 } from "./types.ts";
+export const SAVE_VERSION = 4;
 export const SAVE_KEY = "manual-labor:save:v2";
 export const LEGACY_SAVE_KEY = "manual-labor:save:v1";
 const nonnegative = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+export const validCurrency = (value: unknown): value is number =>
+  typeof value === "number" &&
+  value >= 0 &&
+  (Number.isSafeInteger(value) || Number.isSafeInteger(value * 100));
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 function upgrades(value: unknown, type: MachineType): UpgradeId[] | null {
@@ -49,11 +54,43 @@ function parseMachine(value: unknown, version: number): MachineInstance | null {
     !Number.isFinite(value.progress) ||
     value.progress < 0 ||
     value.progress >= 1 ||
-    !nonnegative(value.lifetime) ||
+    !validCurrency(value.lifetime) ||
     !nonnegative(value.bills)
   )
     return null;
+  let bottler: MachineInstance["bottler"];
+  if (type === "bottler") {
+    const b = value.bottler;
+    if (
+      version < 4 ||
+      !record(b) ||
+      typeof b.size !== "string" ||
+      !Object.hasOwn(BOTTLING.capacity, b.size) ||
+      typeof b.fill !== "number" ||
+      !Number.isFinite(b.fill) ||
+      b.fill < 0 ||
+      b.fill > BOTTLING.maxFill ||
+      typeof b.valve !== "number" ||
+      !Number.isFinite(b.valve) ||
+      b.valve < 0 ||
+      b.valve > 1 ||
+      typeof b.dripMs !== "number" ||
+      !Number.isFinite(b.dripMs) ||
+      b.dripMs < 0 ||
+      b.dripMs > BOTTLING.residualMs ||
+      typeof b.regulated !== "boolean"
+    )
+      return null;
+    bottler = {
+      size: b.size as "short" | "standard" | "tall",
+      fill: b.fill,
+      valve: b.valve,
+      dripMs: b.dripMs,
+      regulated: b.regulated,
+    };
+  }
   return {
+    ...(bottler ? { bottler } : {}),
     id: value.id,
     type,
     tier,
@@ -64,15 +101,15 @@ function parseMachine(value: unknown, version: number): MachineInstance | null {
     upgrades: owned,
   };
 }
-/** Accepts legacy v1/v2 as well as v3. Invalid saves never inject unvalidated state. */
+/** Accepts legacy v1/v2 as well as v3/v4. Invalid saves never inject unvalidated state. */
 export function decodeSave(raw: string | null): WorkshopState | null {
   if (!raw) return null;
   try {
     const data: unknown = JSON.parse(raw);
     if (
       !record(data) ||
-      !nonnegative(data.cash) ||
-      !nonnegative(data.lifetime) ||
+      !validCurrency(data.cash) ||
+      !validCurrency(data.lifetime) ||
       data.lifetime < data.cash ||
       !nonnegative(data.bills)
     )
@@ -96,7 +133,7 @@ export function decodeSave(raw: string | null): WorkshopState | null {
       };
     }
     if (
-      (data.version !== 2 && data.version !== 3) ||
+      (data.version !== 2 && data.version !== 3 && data.version !== 4) ||
       !Array.isArray(data.machines) ||
       data.machines.length === 0 ||
       !Array.isArray(data.slots) ||

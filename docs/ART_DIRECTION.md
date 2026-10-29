@@ -101,3 +101,9 @@ Deadpan humor belongs sparingly on equipment/environmental labels, e.g. **LOAD R
 Reuse `src/tokens.css` and `src/ui/Controls.tsx`, `useElementSize.ts`, and `pagination.ts`. New machines add registry/instance/simulation logic independently of illustrations and screens. Follow the same palette, type, outlines, status language, and viewport rules. Do not add new gameplay in a visual task or introduce a style per machine.
 
 Before delivery: build, run gameplay/pagination checks, inspect Workshop/Storage/Catalog/Modifications at phone and short-landscape dimensions, verify there is no page overflow, confirm all targets and page controls are visible, and exercise both production gestures and rearranging without losing saved progress. Report physical-device verification limits honestly.
+
+## Bottler family
+
+BT–02 uses a mint load-bearing frame, transparent outlined vessels, orange rotary valve and capper grip, visible carriage rails and a separate output crate. Keep silhouette, hit areas and piping mechanically legible at phone size. Water uses pale clear liquid (`#A9C9C5`), Soda muted amber (`#B8794D`) with reinforced fittings and additional gauges, and Premium rich brown-red (`#986555`) with aged brass surfaces and quality-control hardware. These are physical liquid/material colors, never new UI themes.
+
+Use independent SVG assemblies in `components/bottler/Parts.tsx`. Animate fluid, valve, carriage and capper from shared simulation snapshots; show a compact percentage/target plate and physical 95–100% marks. No quality modal or permanent instruction stack. Loader arm, valve motor, capper drive and crate conveyor reflect only that instance’s upgrades. Carbonation/flow motion runs while producing, and reduced motion disables repeated effects. Preserve the common Workshop enclosure, viewport sizing, pagination, navigation and maintenance panel.

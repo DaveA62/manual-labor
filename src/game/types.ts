@@ -1,6 +1,17 @@
-export type Phase = 'feed' | 'raise' | 'stamp' | 'lift' | 'collect';
-export type MachineType = 'money-press';
-export type UpgradeId = 'feeder' | 'motor' | 'collector' | 'stamper' | 'printing';
+export type PressPhase = 'feed' | 'raise' | 'stamp' | 'lift' | 'collect';
+export type BottlerPhase = 'load' | 'fill' | 'transfer' | 'cap' | 'collect';
+export type Phase = PressPhase | BottlerPhase;
+export type MachineType = 'money-press' | 'bottler';
+export type UpgradeId = 'feeder' | 'motor' | 'collector' | 'stamper' | 'printing' | 'bottle-loader' | 'flow-regulator' | 'auto-capper' | 'crate-conveyor';
+export type BottleSize = 'short' | 'standard' | 'tall';
+export interface BottlerState {
+  size: BottleSize;
+  /** Fill normalized to this bottle’s capacity; 1 = target, 1.25 = spill limit. */
+  fill: number;
+  valve: number;
+  dripMs: number;
+  regulated: boolean;
+}
 
 export interface MachineInstance {
   id: string;
@@ -13,6 +24,7 @@ export interface MachineInstance {
   progress: number;
   lifetime: number;
   bills: number;
+  bottler?: BottlerState;
 }
 export interface WorkshopState {
   cash: number;
@@ -22,7 +34,7 @@ export interface WorkshopState {
   /** The array length is the unlocked capacity; null is an available slot. */
   slots: (string | null)[];
 }
-export type ManualAction = { type: 'feed' } | { type: 'turn'; amount: number } | { type: 'stamp' } | { type: 'collect' };
+export type ManualAction = { type: 'feed' } | { type: 'turn'; amount: number } | { type: 'stamp' } | { type: 'collect' } | { type: 'load' } | { type: 'valve'; amount: number } | { type: 'transfer'; amount: number } | { type: 'cap'; amount: number };
 export type WorkshopAction =
   | { type: 'operate'; machineId: string; action: ManualAction }
   | { type: 'tick'; elapsedMs: number }

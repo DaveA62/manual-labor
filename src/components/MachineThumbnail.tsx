@@ -1,6 +1,9 @@
+import { BottlerThumbnail } from './bottler/Parts';
+import type { MachineType } from '../game/types';
 import type { MachineTier } from '../game/definitions';
 /** Catalog/bay illustration only. The interactive press artwork is maintained separately. */
-export function MachineThumbnail({ finish = 'mint' }: { finish?: MachineTier['finish'] }) {
+export function MachineThumbnail({ finish = 'mint', type = 'money-press' }: { finish?: MachineTier['finish']; type?: MachineType }) {
+  if (type === 'bottler') return <BottlerThumbnail finish={finish} />;
   return <svg data-finish={finish} viewBox="0 0 280 190" className="machine-thumbnail" aria-hidden="true" fill="none" stroke="var(--charcoal)" strokeWidth="3" strokeLinejoin="round">
     <path d="M28 166h224v13H28z" fill="var(--frame)" />
     <path d="M78 42h17v116H78zm102 0h17v116h-17z" fill="var(--machine-paint, var(--mint))" />

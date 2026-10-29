@@ -134,7 +134,7 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
               }
             }}><Icon name="grip" size={19} /></button></header>
             <button className="machine-open" onClick={() => onOpen(entry.machine.id)} aria-label={`Operate ${name}`}>
-              <div className="bay-illustration"><MachineThumbnail finish={tier(entry.machine).finish} /></div>
+              <div className="bay-illustration"><MachineThumbnail type={entry.machine.type} finish={tier(entry.machine).finish} /></div>
               <span className="machine-nameplate"><span className="equipment-label">{definition(entry.machine).model} / {serial(entry.number)}</span><strong>{tier(entry.machine).name}</strong></span>
               <StatusLamp running={automated(entry.machine)}>{machineStatus(entry.machine)}</StatusLamp>
               <span className="bay-phase">{phaseLabel[entry.machine.phase]} <span>{Math.round(entry.machine.progress * 100)}%</span></span>
@@ -147,6 +147,6 @@ export function Storage({ state, dispatch, onOpen, onShop }: { state: WorkshopSt
     </div>
     <footer className="screen-footer"><Button className="add-bay-control" disabled={state.cash < cost || !Number.isSafeInteger(cost)} onClick={() => dispatch({ type: 'buy-slot' })} aria-label={`Unlock storage slot for ${money(cost)}`}><Icon name="plus" size={16} /><span>Add bay</span><strong>{money(cost)}</strong></Button><Pager page={page} pages={pages} onChange={changePage} dragPages /></footer>
     <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
-    {dragged && visual?.active && <div className="drag-ghost" style={{ left: visual.x, top: visual.y }} aria-hidden="true"><MachineThumbnail finish={tier(dragged.machine).finish} /><strong>{definition(dragged.machine).model} / {serial(dragged.number)}</strong></div>}
+    {dragged && visual?.active && <div className="drag-ghost" style={{ left: visual.x, top: visual.y }} aria-hidden="true"><MachineThumbnail type={dragged.machine.type} finish={tier(dragged.machine).finish} /><strong>{definition(dragged.machine).model} / {serial(dragged.number)}</strong></div>}
   </section>;
 }

@@ -1,14 +1,17 @@
+import { advanceBottler, completeBottlerPhase, operateBottler } from './bottling.ts';
 import { automated, cycleDuration, definition, earnings, fullyAutomated } from './machines.ts';
 import type { MachineInstance, ManualAction } from './types.ts';
 
 /** The only production transition that pays is collect → feed. */
 export function completePhase(machine: MachineInstance): MachineInstance {
+  if (machine.type === 'bottler') return completeBottlerPhase(machine);
   const phases = definition(machine).phases;
   const next = phases[(phases.indexOf(machine.phase) + 1) % phases.length];
   const payout = machine.phase === 'collect' ? earnings(machine) : 0;
   return { ...machine, phase: next, progress: 0, lifetime: machine.lifetime + payout, bills: machine.bills + (payout > 0 ? 1 : 0) };
 }
 export function operate(machine: MachineInstance, action: ManualAction): MachineInstance {
+  if (machine.type === 'bottler') return operateBottler(machine, action);
   if (automated(machine)) return machine;
   if (action.type === 'turn') {
     if ((machine.phase !== 'raise' && machine.phase !== 'lift') || !Number.isFinite(action.amount)) return machine;
@@ -22,6 +25,7 @@ export function operate(machine: MachineInstance, action: ManualAction): Machine
 
 /** Advances one instance, carries leftover time, and stops precisely at manual input. */
 export function advanceMachine(machine: MachineInstance, elapsedMs: number): MachineInstance {
+  if (machine.type === 'bottler') return advanceBottler(machine, elapsedMs);
   if (!Number.isFinite(elapsedMs) || elapsedMs <= 0 || !automated(machine)) return machine;
   let current = machine;
   let remaining = elapsedMs;
@@ -35,7 +39,7 @@ export function advanceMachine(machine: MachineInstance, elapsedMs: number): Mac
         if (remaining < 1e-7) break;
       }
     }
-    const duration = definition(current).durationMs[current.phase];
+    const duration = definition(current).durationMs[current.phase]!;
     const needed = (1 - current.progress) * duration;
     if (remaining + 1e-7 >= needed) {
       remaining = Math.max(0, remaining - needed);

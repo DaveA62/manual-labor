@@ -135,7 +135,7 @@ test('v3 saves round trip mixed tiers and reject unknown or missing tier IDs', (
   try {
     assert.equal(writeSave(state), true);
     assert.equal(savedKey, SAVE_KEY);
-    assert.equal(JSON.parse(raw).version, 3);
+    assert.equal(JSON.parse(raw).version, 4);
     assert.deepEqual(decodeSave(raw), state);
   } finally { Reflect.deleteProperty(globalThis, 'localStorage'); }
   assert.equal(createWorkshop().machines[0].tier, 'cash');

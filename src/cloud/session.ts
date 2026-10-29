@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { createWorkshop, reducer } from "../game/engine.ts";
 import { readSave, writeSave } from "../game/save.ts";
-import { decodeSave } from "../game/codec.ts";
+import { decodeSave, SAVE_VERSION } from "../game/codec.ts";
 import type { WorkshopAction, WorkshopState } from "../game/types.ts";
 import type { GamePlatform } from "../platform/contracts.ts";
 import { createProductionClock } from "../runtime/clock.ts";
@@ -110,7 +110,7 @@ export class GameSession {
     const local = this.parse<LocalBranch>(LOCAL);
     this.branch =
       local &&
-      decodeSave(JSON.stringify({ version: 3, ...local.state })) &&
+      decodeSave(JSON.stringify({ version: SAVE_VERSION, ...local.state })) &&
       Number.isFinite(local.checkpoint)
         ? local
         : {
@@ -293,7 +293,10 @@ export class GameSession {
     this.update({ state: next });
     if (action.type !== "tick") {
       // Continuous crank motion checkpoints once a second; financial/discrete actions save immediately.
-      if (action.type !== "operate" || action.action.type !== "turn")
+      if (
+        action.type !== "operate" ||
+        !["turn", "valve", "transfer", "cap"].includes(action.action.type)
+      )
         this.persist();
       clearTimeout(this.syncTimer);
       this.syncTimer = setTimeout(() => {
@@ -346,7 +349,7 @@ export class GameSession {
         validatedState(c.base);
         if (
           c.current &&
-          !decodeSave(JSON.stringify({ version: 3, ...c.current }))
+          !decodeSave(JSON.stringify({ version: SAVE_VERSION, ...c.current }))
         )
           c.current = undefined;
         c.reports = c.reports.filter(validReport);
@@ -359,6 +362,9 @@ export class GameSession {
             !Number.isSafeInteger(c.pending.request.revision))
         )
           c.pending = undefined;
+        // v1 outbox contains only unchanged Money Press intent; preserve interrupted requests.
+        if (c.pending?.request.rulesVersion === 1)
+          c.pending.request.rulesVersion = RULES_VERSION;
         return c;
       }
     } catch {
@@ -489,7 +495,7 @@ export class GameSession {
     else await this.attach(this.view.user, this.transport, true);
   };
   exportBackup = () => ({
-    version: 3,
+    version: SAVE_VERSION,
     state: this.view.state,
     recovery: this.parse<unknown[]>("manual-labor:recovery") ?? [],
   });

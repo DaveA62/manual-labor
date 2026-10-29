@@ -1,5 +1,5 @@
 /** Host services only. Native adapters are installed before mounting React. */
-export type FeedbackKind = 'click' | 'stamp' | 'cash' | 'buy' | 'pickup';
+export type FeedbackKind = 'click' | 'stamp' | 'cash' | 'buy' | 'pickup' | 'glass' | 'seal';
 export interface SaveStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;

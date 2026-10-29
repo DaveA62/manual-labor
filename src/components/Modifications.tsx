@@ -24,8 +24,8 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
   const pages = pageCount(upgrades.length, size);
   const page = clampPage(requestedPage, pages);
   function close() { setConfirmation(null); onClose(); }
-  return <DialogPanel open={open} onClose={close} title="Modifications" code={`${definition(machine).model} / PRESS ${serial(number)} / ${current.name.toUpperCase()}`} className="maintenance-dialog">
-    <div className="maintenance-record"><span>{machine.bills.toLocaleString()} {machine.bills === 1 ? 'bill' : 'bills'} <b>·</b> {money(machine.lifetime)} earned</span><strong>{money(cash)} available</strong></div>
+  return <DialogPanel open={open} onClose={close} title="Modifications" code={`${definition(machine).model} / UNIT ${serial(number)} / ${current.name.toUpperCase()}`} className="maintenance-dialog">
+    <div className="maintenance-record"><span>{machine.bills.toLocaleString()} {definition(machine).unit}{machine.bills === 1 ? '' : 's'} <b>·</b> {money(machine.lifetime)} earned</span><strong>{money(cash)} available</strong></div>
     <nav className="maintenance-tabs" aria-label="Maintenance sections">
       <Button aria-pressed={section === 'upgrades'} onClick={() => { setSection('upgrades'); setConfirmation(null); }}>Upgrades <span>{current.upgradePriceMultiplier}× prices</span></Button>
       <Button aria-pressed={section === 'refit'} onClick={() => setSection('refit')}>Machine Refit</Button>
@@ -49,10 +49,10 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
       </div>
       <Pager page={page} pages={pages} onChange={setPage} />
     </> : <section className="refit-section" aria-label="Machine Refit">
-      <div className="refit-route"><div><span className="equipment-label">CURRENT TIER</span><h3>{current.name}</h3><span>{money(current.baseEarnings)} / bill base</span></div><Icon name="right" size={22} /><div><span className="equipment-label">{next ? 'NEXT TIER' : 'MAX TIER'}</span><h3>{next?.name ?? current.name}</h3><span>{next ? `${money(next.baseEarnings)} / bill · ${next.upgradePriceMultiplier}× prices` : 'No further refits'}</span></div></div>
+      <div className="refit-route"><div><span className="equipment-label">CURRENT TIER</span><h3>{current.name}</h3><span>{money(current.baseEarnings)} / {definition(machine).unit} base</span></div><Icon name="right" size={22} /><div><span className="equipment-label">{next ? 'NEXT TIER' : 'MAX TIER'}</span><h3>{next?.name ?? current.name}</h3><span>{next ? `${money(next.baseEarnings)} / ${definition(machine).unit} · ${next.upgradePriceMultiplier}× prices` : 'No further refits'}</span></div></div>
       {next && requirements ? <>
         {confirming ? <div className="refit-confirmation" role="group" aria-label="Confirm machine refit">
-          <h3>Confirm refit</h3><p>Removes all upgrades and automation from this press. Production restarts at Load. No upgrade refunds.</p><p>ID, serial, bay, and lifetime record stay intact.</p>
+          <h3>Confirm refit</h3><p>Removes all upgrades and automation from this machine. Production restarts at Load. No upgrade refunds.</p><p>ID, serial, bay, and lifetime record stay intact.</p>
         </div> : <div className="refit-requirements"><span className="equipment-label">REQUIRED UPGRADES</span><ul>{requirements.requiredUpgrades.map(id => {
           const installed = machine.upgrades.includes(id);
           return <li key={id}><Icon name={installed ? 'check' : 'wrench'} size={16} /><span>{upgrades.find(item => item.id === id)?.name}</span><strong>{installed ? 'Installed' : 'Required'}</strong></li>;
@@ -67,7 +67,7 @@ export function Modifications({ open, onClose, machine, number, cash, dispatch, 
             setConfirmation(null); setPage(0); feedback('buy', sound);
           }}>{confirming ? 'Confirm refit' : eligible ? 'Refit machine' : cash < requirements.fee ? 'Insufficient cash' : 'Install required upgrades'}</Button>
         </footer>
-      </> : <div className="refit-max"><span>MAX TIER</span><p>{money(current.baseEarnings)} / bill base · {current.upgradePriceMultiplier}× upgrade prices</p></div>}
+      </> : <div className="refit-max"><span>MAX TIER</span><p>{money(current.baseEarnings)} / {definition(machine).unit} base · {current.upgradePriceMultiplier}× upgrade prices</p></div>}
     </section>}
   </DialogPanel>;
 }

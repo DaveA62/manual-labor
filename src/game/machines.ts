@@ -1,4 +1,4 @@
-import { MACHINE_DEFINITIONS } from './definitions.ts';
+import { BOTTLING, MACHINE_DEFINITIONS } from './definitions.ts';
 import type { MachineInstance, MachineType, Phase, UpgradeId } from './types.ts';
 
 let idSequence = 0;
@@ -12,8 +12,11 @@ export function newMachineId(): string {
   return `press-${Date.now().toString(36)}-${(++idSequence).toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 export function createMachine(id: string, type: MachineType = 'money-press'): MachineInstance {
-  return { id, type, tier: MACHINE_DEFINITIONS[type].tiers[0].id, upgrades: [], phase: MACHINE_DEFINITIONS[type].phases[0], progress: 0, lifetime: 0, bills: 0 };
+  return { id, type, tier: MACHINE_DEFINITIONS[type].tiers[0].id, upgrades: [], phase: MACHINE_DEFINITIONS[type].phases[0], progress: 0, lifetime: 0, bills: 0, ...(type === 'bottler' ? { bottler: initialBottle(0) } : {}) };
 }
+export function initialBottle(cycles: number) { return { size: BOTTLING.sizes[cycles % 3], fill: 0, valve: 0, dripMs: 0, regulated: false }; }
+export function bottleQuality(fill: number) { return fill >= .95 - 1e-9 && fill <= 1 + 1e-9 ? 'Precise' : fill >= .85 - 1e-9 && fill <= 1.05 + 1e-9 ? 'Acceptable' : 'Poor'; }
+export function bottlePayout(machine: MachineInstance) { const b=machine.bottler!; const quality=bottleQuality(b.fill); return Math.round(tier(machine).baseEarnings * (b.regulated ? 1 : quality === 'Precise' ? 1.2 : quality === 'Acceptable' ? 1 : .7) * 100) / 100; }
 export const definition = (machine: MachineInstance) => MACHINE_DEFINITIONS[machine.type];
 export const tier = (machine: MachineInstance) => definition(machine).tiers.find(item => item.id === machine.tier)!;
 export const nextTier = (machine: MachineInstance) => {
@@ -30,9 +33,9 @@ export const canRefit = (machine: MachineInstance, cash: number) => {
 };
 export const earnings = (machine: MachineInstance) => tier(machine).baseEarnings * (machine.upgrades.includes('printing') ? 2 : 1);
 export const direction = (machine: MachineInstance) => machine.bills % 2 === 0 ? 1 : -1;
-export const automated = (machine: MachineInstance, phase: Phase = machine.phase) => machine.upgrades.includes(definition(machine).automation[phase]);
+export const automated = (machine: MachineInstance, phase: Phase = machine.phase) => !!definition(machine).automation[phase] && machine.upgrades.includes(definition(machine).automation[phase]!);
 export const fullyAutomated = (machine: MachineInstance) => definition(machine).phases.every(phase => automated(machine, phase));
-export const cycleDuration = (machine: MachineInstance) => definition(machine).phases.reduce((total, phase) => total + definition(machine).durationMs[phase], 0);
-export const earningsPerMinute = (machine: MachineInstance) => fullyAutomated(machine) ? earnings(machine) * 60000 / cycleDuration(machine) : 0;
+export const cycleDuration = (machine: MachineInstance) => definition(machine).phases.reduce((total, phase) => total + definition(machine).durationMs[phase]! * (machine.type === 'bottler' && phase === 'fill' ? BOTTLING.capacity[machine.bottler!.size] : 1), 0);
+export const earningsPerMinute = (machine: MachineInstance) => fullyAutomated(machine) ? earnings(machine) * 60000 / (machine.type === 'bottler' ? Object.values(definition(machine).durationMs).reduce((a,b) => a+b,0) : cycleDuration(machine)) : 0;
 export const machineStatus = (machine: MachineInstance) => fullyAutomated(machine) ? 'Fully Automated' : automated(machine) ? 'Running' : 'Needs Input';
-export const phaseLabel: Record<Phase, string> = { feed: 'Loading paper', raise: 'Raising head', stamp: 'Stamping', lift: 'Lifting head', collect: 'Collecting bill' };
+export const phaseLabel: Record<Phase, string> = { feed: 'Loading paper', raise: 'Raising head', stamp: 'Stamping', lift: 'Lifting head', collect: 'Collecting output', load: 'Loading bottle', fill: 'Regulating flow', transfer: 'Moving carriage', cap: 'Sealing bottle' };

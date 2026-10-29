@@ -3,7 +3,7 @@ let context: AudioContext | undefined;
 export function feedback(kind: FeedbackKind, sound: boolean) {
   try {
     if (typeof globalThis.navigator?.vibrate === 'function') {
-      if (kind === 'stamp') navigator.vibrate(20);
+      if ((kind === 'stamp' || kind === 'seal')) navigator.vibrate(20);
       if (kind === 'pickup') navigator.vibrate(12);
     }
   } catch { /* Haptics are optional. */ }
@@ -12,7 +12,7 @@ export function feedback(kind: FeedbackKind, sound: boolean) {
   try {
     context ??= new AudioContext();
     void context.resume().catch(() => {});
-    if (kind === 'click' || kind === 'stamp') {
+    if (kind === 'click' || kind === 'stamp' || kind === 'seal') {
       const duration = kind === 'stamp' ? .09 : .025;
       const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * duration), context.sampleRate);
       const samples = buffer.getChannelData(0);
@@ -26,7 +26,7 @@ export function feedback(kind: FeedbackKind, sound: boolean) {
     const gain = context.createGain();
     const now = context.currentTime;
     oscillator.type = kind === 'stamp' ? 'triangle' : 'sine';
-    const frequency = { click: 160, stamp: 95, cash: 740, buy: 520 }[kind];
+    const frequency = { click: 160, stamp: 95, cash: 740, buy: 520, glass: 1760, seal: 320 }[kind];
     oscillator.frequency.setValueAtTime(frequency, now);
     oscillator.frequency.exponentialRampToValueAtTime(kind === 'cash' ? 1120 : frequency / 3, now + 0.13);
     gain.gain.setValueAtTime(0.055, now);

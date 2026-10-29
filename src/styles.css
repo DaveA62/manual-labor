@@ -416,3 +416,21 @@ h1,h2,h3{font-family:var(--heading);font-weight:700;line-height:1;text-transform
 }
 @media(max-width:420px){.game-header .wordmark{font-size:18px}.game-header .header-cash strong{font-size:17px}}
 .shift-machines>div>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* BT–02: shared vector stage, family-specific materials and restrained fluid motion. */
+[data-bottler-tier="water"]{--liquid:#a9c9c5;--liquid-edge:#627e8d}
+[data-bottler-tier="soda"]{--liquid:#b8794d;--liquid-edge:#865635;--machine-paint:var(--mint);--machine-highlight:var(--mint-light);--machine-shade:var(--steel-dark)}
+[data-bottler-tier="premium"]{--liquid:#986555;--liquid-edge:#704a42}
+.bottler-label{font-family:var(--heading);fill:var(--charcoal);stroke:none;letter-spacing:.5px}
+.bottler-meter{position:absolute;top:8px;left:12px;display:flex;flex-direction:column;gap:3px;pointer-events:none;font-size:11px;color:var(--charcoal);font-variant-numeric:tabular-nums;background:var(--panel);border:1px solid var(--charcoal);padding:6px 8px}
+.bottler-meter strong{font-size:16px}.bottler-meter span:last-child{font-family:var(--heading);letter-spacing:.4px}
+.bottle-fluid{transition:y 50ms linear,height 50ms linear}
+.capper-lever{transition:transform 150ms cubic-bezier(.15,.7,.3,1)}
+.liquid-stream{animation:liquid-flow 600ms linear infinite}.liquid-splash{animation:liquid-spill 400ms steps(2,end) infinite}.capper-impact{animation:cap-impact 240ms ease-out both}
+@keyframes liquid-flow{to{stroke-dashoffset:-22}}@keyframes liquid-spill{50%{transform:translateY(3px);opacity:.5}}@keyframes cap-impact{to{opacity:0;transform:translateY(-5px)}}
+@media(max-width:600px){.bottler-meter{top:auto;bottom:5px;left:8px;font-size:10px;gap:2px;padding:4px 6px}.bottler-meter strong{font-size:14px}}
+@media(max-height:500px){.bottler-meter{top:4px;bottom:auto;left:6px;padding:4px 6px;font-size:10px}.bottler-meter strong{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.liquid-stream,.liquid-splash,.capper-impact{animation:none}.capper-impact{display:none}.bottle-fluid,.capper-lever{transition:none}}
+.reservoir-bubbles.is-flowing{animation:carbonation 900ms linear infinite}
+@keyframes carbonation{to{transform:translateY(-9px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.reservoir-bubbles.is-flowing{animation:none}}

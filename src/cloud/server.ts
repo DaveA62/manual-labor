@@ -27,7 +27,7 @@ export async function synchronize(
 ): Promise<SyncResult> {
   if (!request || typeof request !== "object")
     throw new Error("Invalid synchronization request.");
-  if (request.rulesVersion !== RULES_VERSION)
+  if (request.rulesVersion !== RULES_VERSION && request.rulesVersion !== 1)
     throw new Error("Game update required. Reload before syncing.");
   if (
     !/^[0-9a-f-]{36}$/i.test(request.id) ||
@@ -39,6 +39,27 @@ export async function synchronize(
   const loaded = await repository.read(playerId, request.id);
   if (loaded.receipt) return loaded.receipt;
   const old = loaded.record;
+  // Rules v1 has identical Press semantics. Keep already-open Press-only clients working.
+  if (
+    request.rulesVersion === 1 &&
+    ((old?.state ?? request.initial)?.machines.some(
+      (m) => m.type !== "money-press",
+    ) ||
+      request.events.some(
+        (e) =>
+          (e.action.type === "buy-machine" &&
+            e.action.machineType !== "money-press") ||
+          (e.action.type === "buy-upgrade" &&
+            !["feeder", "motor", "collector", "stamper", "printing"].includes(
+              e.action.upgradeId,
+            )) ||
+          (e.action.type === "operate" &&
+            !["feed", "turn", "stamp", "collect"].includes(
+              e.action.action.type,
+            )),
+      ))
+  )
+    throw new Error("Game update required. Reload before syncing.");
   if ((old?.revision ?? 0) !== request.revision) throw new CloudConflict(old!);
   const initial = old
     ? validatedState(old.state)

@@ -1,7 +1,7 @@
 import { reducer } from "../game/engine.ts";
 import { MACHINE_DEFINITIONS } from "../game/definitions.ts";
 import { tier } from "../game/machines.ts";
-import { decodeSave } from "../game/codec.ts";
+import { decodeSave, SAVE_VERSION, validCurrency } from "../game/codec.ts";
 import type { WorkshopState } from "../game/types.ts";
 import { OFFLINE_CAP_MS } from "./protocol.ts";
 import type { PlayerAction, ShiftReport, TimedAction } from "./protocol.ts";
@@ -14,20 +14,24 @@ export function validAction(v: unknown): v is PlayerAction {
   if (!record(v)) return false;
   if (v.type === "buy-slot" || v.type === "reset") return true;
   if (v.type === "buy-machine")
-    return v.machineType === "money-press" && id(v.id);
+    return (
+      typeof v.machineType === "string" &&
+      Object.hasOwn(MACHINE_DEFINITIONS, v.machineType) &&
+      id(v.id)
+    );
   if (!id(v.machineId)) return false;
   if (v.type === "move")
     return Number.isSafeInteger(v.to) && (v.to as number) >= 0;
   if (v.type === "refit")
     return typeof v.fromTier === "string" && v.fromTier.length <= 64;
   if (v.type === "buy-upgrade")
-    return MACHINE_DEFINITIONS["money-press"].upgrades.some(
-      (u) => u.id === v.upgradeId,
-    );
+    return Object.values(MACHINE_DEFINITIONS)
+      .flatMap((d) => d.upgrades)
+      .some((u) => u.id === v.upgradeId);
   if (v.type !== "operate" || !record(v.action)) return false;
   return (
-    ["feed", "stamp", "collect"].includes(String(v.action.type)) ||
-    (v.action.type === "turn" &&
+    ["feed", "stamp", "collect", "load"].includes(String(v.action.type)) ||
+    (["turn", "valve", "transfer", "cap"].includes(String(v.action.type)) &&
       typeof v.action.amount === "number" &&
       Number.isFinite(v.action.amount) &&
       Math.abs(v.action.amount) <= 1)
@@ -56,7 +60,7 @@ export function validEvents(value: unknown): value is TimedAction[] {
 }
 export function validatedState(value: unknown): WorkshopState {
   const decoded = decodeSave(
-    JSON.stringify({ ...(record(value) ? value : {}), version: 3 }),
+    JSON.stringify({ ...(record(value) ? value : {}), version: SAVE_VERSION }),
   );
   if (!decoded) throw new Error("Invalid save data.");
   return decoded;
@@ -127,7 +131,7 @@ export function validReport(value: unknown): value is ShiftReport {
   if (
     !record(value) ||
     !id(value.id) ||
-    !Number.isSafeInteger(value.total) ||
+    !validCurrency(value.total) ||
     (value.total as number) <= 0 ||
     typeof value.elapsedMs !== "number" ||
     !Number.isFinite(value.elapsedMs) ||
@@ -145,7 +149,7 @@ export function validReport(value: unknown): value is ShiftReport {
       id(m.id) &&
       typeof m.name === "string" &&
       m.name.length <= 256 &&
-      Number.isSafeInteger(m.earnings) &&
+      validCurrency(m.earnings) &&
       (m.earnings as number) > 0,
   );
 }

@@ -1,5 +1,5 @@
 import { ECONOMY, MACHINE_DEFINITIONS, slotPrice } from './definitions.ts';
-import { canRefit, createMachine, definition, nextTier, upgradePrice } from './machines.ts';
+import { canRefit, createMachine, initialBottle, definition, nextTier, upgradePrice } from './machines.ts';
 import { advanceMachine, operate } from './simulation.ts';
 import type { MachineInstance, WorkshopAction, WorkshopState } from './types.ts';
 
@@ -37,7 +37,7 @@ export function reducer(state: WorkshopState, action: WorkshopAction): WorkshopS
       if (!machine || machine.tier !== action.fromTier || !canRefit(machine, state.cash)) return state;
       const next = nextTier(machine)!;
       return { ...state, cash: state.cash - next.refit!.fee, machines: state.machines.map(item => item.id === machine.id
-        ? { ...item, tier: next.id, upgrades: [], phase: definition(item).phases[0], progress: 0 } : item) };
+        ? { ...item, tier: next.id, upgrades: [], phase: definition(item).phases[0], progress: 0, ...(item.type === 'bottler' ? { bottler: initialBottle(item.bills) } : {}) } : item) };
     }
     case 'buy-machine': {
       const config = Object.hasOwn(MACHINE_DEFINITIONS, action.machineType) ? MACHINE_DEFINITIONS[action.machineType] : undefined;

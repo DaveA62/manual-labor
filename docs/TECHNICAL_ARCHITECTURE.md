@@ -1,6 +1,6 @@
 # Manual Labor — technical architecture
 
-The browser game remains React + TypeScript + Vite. SVG is the production machine renderer. Phaser 3.90.0 is a development-only evaluation, not an engine migration. No native projects or additional machine families are included.
+The browser game remains React + TypeScript + Vite. SVG is the production machine renderer. Phaser 3.90.0 is a development-only evaluation, not an engine migration. Money Press and Bottling Machine are independent families. No native packaging projects are included.
 
 ## Ownership and data flow
 
@@ -10,7 +10,7 @@ The browser game remains React + TypeScript + Vite. SVG is the production machin
 | Instance data | `src/game/types.ts`, `machines.ts` | Persistent ID, tier, upgrades, cycle progress, lifetime record; derived prices/status |
 | Simulation | `src/game/simulation.ts` | Pure per-instance phase transitions; only collect → feed pays |
 | Workshop reducer | `src/game/engine.ts` | All instances, wallet, purchases, slots, order, atomic prestige validation |
-| Save codec | `src/game/codec.ts`, `save.ts` | Pure v1/v2 migration and v3 validation/serialization; injectable storage wrapper |
+| Save codec | `src/game/codec.ts`, `save.ts` | Pure v1/v2/v3 migration and v4 validation/serialization; injectable storage wrapper |
 | Session host | `src/game/useGame.ts`, `src/cloud/session.ts`, `src/runtime/clock.ts` | One 50ms foreground clock, local checkpoints, account journals, cloud reconciliation and lifecycle flush |
 | React UI | `src/App.tsx`, `src/components/`, `src/ui/` | Navigation, HUD, Storage, Catalog, Modifications, accessible dialogs |
 | Renderer interface | `src/runtime/machine.ts`, `useMachineRuntime.ts` | Selected instance snapshots, scoped manual intent, feedback and hints |
@@ -26,7 +26,7 @@ The simulation and reducer use plain TypeScript values; they import no React, DO
 
 `createProductionClock` reads the platform's monotonic time and activity. It caps a running tick at 250ms and resets its time origin on every activity change. Suspended/hidden time stops foreground ticks; the authenticated backend separately claims eligible offline production. A renderer RAF, Phaser update, tween, or texture callback never ticks production. React Strict Mode and renderer teardown must leave one session clock and no orphan scene listeners.
 
-`GameSession`, observed by the small `useGame` React adapter, writes economy/order changes immediately and checkpoints motion once a second. Lifecycle events flush dirty state. Browser visibility, pagehide, and pageshow map to the lifecycle port. Saves retain the existing `manual-labor:save:v2` key and v3 payload. The v3 game payload, tier balance, automation durations, and purchasing rules remain intact. Cloud envelopes add revisions, journal events, request receipts and server timestamps outside the game payload.
+`GameSession`, observed by the small `useGame` React adapter, writes economy/order changes immediately and checkpoints motion once a second. Lifecycle events flush dirty state. Browser visibility, pagehide, and pageshow map to the lifecycle port. Saves retain the existing `manual-labor:save:v2` key and v4 payload. Existing Press tier balance, automation durations, and purchasing rules remain intact; the additive Bottler payload persists its physical state. Cloud envelopes add revisions, journal events, request receipts and server timestamps outside the game payload.
 
 ## Platform adapters
 
@@ -52,7 +52,7 @@ All machine renderers fit the existing contained Workshop area. The React shell 
 
 ## Phaser experiment
 
-Run `npm ci` and `npm run dev`, then open `/manual-labor/?renderer=phaser`. In development, Settings also offers **SVG baseline** and **Phaser experiment**. The selection is session-only; switching preserves game state. The experiment uses the normal local save and wallet, so use a disposable browser profile when testing refits or resets. Production URLs ignore the query and show SVG; the toggle is compiled out.
+Run `npm ci` and `npm run dev`, then open `/manual-labor/?renderer=phaser`. In development, Settings also offers **SVG baseline** and **Phaser experiment**. The selection is session-only; switching preserves game state. The Press-only experiment uses the normal local save and wallet, so use a disposable browser profile when testing refits or resets. Production URLs ignore the query and show SVG; the toggle is compiled out.
 
 `src/experiments/phaser/` contains the entire Phaser scene, texture bridge, React mounting adapter, and its CSS. Phaser is pinned as a devDependency. A `import.meta.env.DEV` guard around the dynamic import removes the dependency graph from production output. The TypeScript build still checks the experimental source. Do not add an eager Phaser import to the application, shared runtime, or game modules.
 
@@ -90,3 +90,11 @@ A service-role-only transactional RPC serializes each player, checks the expecte
 Local-only offline calculation is explicitly unverified and remains in its own device branch. A pre-offline snapshot is retained for a safe initial import; device-only money is never silently uploaded to cloud currency. A Shift Report contains already-applied earnings, and Collect only acknowledges it.
 
 The economy is not claimed to be cheat-proof: historical legacy balances and human-origin manual actions cannot be proved by this architecture. New families and rule changes must be validated in the shared replay/simulation and deployed to server and client with the same RULES_VERSION. Future Capacitor/desktop adapters must provide redirect/deep-link and protected auth-session handling, ordered persistence and lifecycle integration. No native projects are added.
+
+## Bottling family (Task 08)
+
+See [BOTTLER.md](BOTTLER.md) for balance, physical controls, timing, migration and validation details. Family definitions now include unit names and step labels. The UI chooses the established SVG renderer per family; Phaser remains a Press-only experiment. `game/simulation.ts` delegates Bottler operations to pure `game/bottling.ts`, retaining one workshop reducer and one clock for every stored instance.
+
+Bottler physical state (`size`, capacity-normalized `fill`, `valve`, residual `dripMs`, `regulated`) is validated in the v4 codec and serialized with the instance. Manual intents are load, valve delta, carriage delta, capper delta, and collect. Time-based flow runs in simulation, including manual-open-valve/drip behavior, independently of the rendered screen. Only collection changes lifetime/output counts, which the existing reducer adds to the shared wallet. Fully automated bulk simulation groups three deterministic sizes and matches subdivided ticks.
+
+Cloud schema 4 is additive; existing schema-3 rows are untouched until synchronized. The versioned migration widens the schema constraint and updates the existing service-only transactional commit to preserve schema and reject downgrades. Rules version 2 understands both families; rules v1 is accepted only for Press-only state and intent. Old pending Press receipts retain their UUIDs. Currency validation now accepts cents for exact 70% payouts; the historical `bills` field remains the aggregate completed-unit count for compatibility. No separate Bottler save, wallet, clock or offline endpoint exists.
